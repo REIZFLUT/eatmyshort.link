@@ -1,0 +1,394 @@
+/* EMSL CSS */
+
+
+
+* {
+    margin: 0px;
+    padding: 0px;
+    font-family: var(--font-family);
+    font-weight: 300;
+    font-size: 1em;
+    line-height: 1.2em;
+    color: var(--font-color);
+    list-style: none;
+    text-align: left;
+}
+
+html,
+body {
+    background-color: var(--main-background);
+}
+
+article,
+section,
+nav,
+div {
+    display: block;
+    box-sizing: border-box;
+}
+
+@media screen {
+    .container {
+        display: block;
+        margin: 0px auto;
+        position: relative;
+        width: 100%;
+        padding: 0px 30px 0px 30px;
+    }
+
+    .top-navi {
+        display: grid;
+        position: relative;
+        width: 100%;
+        max-width: 1920px;
+        margin: 0px auto;
+        background: var(--top-navi-background);
+        padding: 20px 30px;
+        column-gap: 20px;
+        grid-template-columns: calc(100% - 60px) 60px;
+        box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.6);
+        z-index: 9999;
+    }
+
+    main {
+        min-height: calc(100vh - 140px);
+    }
+
+    footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        height: 30px;
+        width: 100%;
+        margin-top: 15px;
+        padding: 15px 30px 10px 30px;
+        border-top: 1px solid #aaaaaa;
+        box-sizing: border-box;
+        font-size: 0.85em;
+        color: #aaaaaa;
+    }
+
+    footer .credits,
+    footer .license{
+        display: flex;
+        flex-direction: column;
+        max-width: 50%;
+    }
+
+    .menu {
+        width: 60px;
+        margin-left: auto;
+    }
+
+    .mainMenuLogoContainer {
+        display: block;
+        width: auto;
+        max-width: 250px;
+    }
+
+    .mainMenuLogoContainer a {
+        display: block;
+    }
+
+    #mainMenuLogo {
+        display: block;
+        height: 100%;
+    }
+
+    #mainMenuBar {
+        display: block;
+        width: 40px;
+        height: 40px;
+    }
+
+    #mainMenuIcon {
+        width: 100%;
+        height: auto;
+    }
+
+    #mainMenuContent {
+        display: block;
+        position: absolute;
+        width: 200px;
+        background: var(--top-navi-background);
+        display: none;
+        z-index: 9999;
+        box-sizing: border-box;
+    }
+
+    .menu:hover #mainMenuContent {
+        display: block;
+        right: 0px;
+    }
+
+    #mainMenuContent ul{
+        display: block;
+        padding: 15px 0px 0px 0px;
+    }
+
+    #mainMenuContent li{
+        display: block;
+        padding:5px 15px 5px 15px;
+        border-bottom:1px solid #CCC;
+        cursor: pointer;
+    }
+
+    #mainMenuContent li a:link,
+    #mainMenuContent li a:visited,
+    #mainMenuContent li a:hover,
+    #mainMenuContent li a:active{
+        text-decoration: none;
+    }
+
+    /* Add new Shortlink */
+    #mainNewShortlink {
+        background: var(--secondary-background);
+        position: relative;
+        display: block;
+        z-index: 1;
+        box-shadow: 0px 0px 8px 0px rgba(0, 0, 0, 0.8);
+    }
+
+    #mainNewShortlink .container {
+        padding: 20px 30px 20px 30px;
+        margin-bottom: 20px;
+    }
+
+    #mainNewShortlink .form-input {
+        margin-bottom: 8px;
+    }
+
+    #mainNewShortlink input,
+    #mainNewShortlink button {
+        display: block;
+        width: 100%;
+        border: none;
+        padding: 15px;
+        box-sizing: border-box;
+        background: #4a4a4a;
+        border-radius: 5px;
+    }
+
+    #mainNewShortlink input::placeholder {
+        color: #ccc;
+    }
+
+    #mainNewShortlink button {
+        background: var(--primary-btn-backround);
+        color: var(--primary-btn-fontcolor);
+        font-weight: 500;
+        text-transform: uppercase;
+        text-align: center;
+    }
+
+    .table,
+    .table tbody,
+    .table thead,
+    .table tr,
+    .table td,
+    .table th {
+        display: block;
+        overflow-wrap: break-word;
+        border: none;
+        outline: none;
+    }
+
+    .links-table tbody tr:nth-child(odd) {
+        background: var(--secondary-background);
+    }
+
+    .links-table tr{
+        display: grid;
+        box-sizing: border-box;
+    }
+
+    .toasts {
+        position: fixed;
+        right: 0px;
+        bottom: 10px;
+        width: 90%;
+        max-width: 400px;
+        padding-right: 30px;
+        height: auto;
+    }
+
+    .toast {
+        position: relative;
+        padding: 10px;
+        padding-bottom: 12px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        background: #ccc;
+        display: none;
+        line-height: 1em;
+        font-weight: 500;
+        box-shadow: 0px 0px 15px 5px #000000;
+    }
+
+    .toast-invalid {
+        background: #330000;
+        color: #ff9900;
+    }
+
+    .toast-success {
+        background: #003300;
+        color: #33ff66;
+    }
+
+    .toast.fadeOut {
+        animation: fadeOutToast 1s 5s;
+        display: block;
+    }
+
+    @keyframes fadeOutToast {
+        0% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+        }
+    }
+
+    .searchForm {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        width: 100%;
+        max-width: 375px;
+        box-shadow: border-box;
+        margin-bottom: 30px;
+    }
+
+    .searchInput {
+        display: block;
+        border: none;
+        padding: 15px;
+        box-sizing: border-box;
+        background: var(--secondary-background);
+        border-radius: 5px 0px 0px 5px;
+    }
+
+    .searchInput::placeholder {
+        color: #ccc;
+    }
+
+    .searchBtn {
+        display: block;
+        border: none;
+        padding: 15px;
+        box-sizing: border-box;
+        background: var(--search-button-color);
+        border-radius: 0px 5px 5px 0px;
+        text-align: center;
+    }
+
+    .simplePagination {
+        display: block;
+        margin-top: 20px;
+    }
+
+    .simplePagination li {
+        display: inline-block;
+        box-sizing: border-box;
+        height: 25px;
+        min-width: 25px;
+        padding: 3px 5px 7px 5px;
+        background: var(--pagination-background);
+        text-align: center;
+        border-right: 1px solid var(--main-background);
+    }
+
+    .simplePagination li.active {
+        background: var(--pagination-active-background);
+    }
+
+    .simplePagination li.active span {
+        color: var(--pagination-active-color);
+    }
+
+    .simplePagination li:first-child {
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+    }
+
+    .simplePagination li:last-child {
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-right: none;
+    }
+
+    .simplePagination li a:link,
+    .simplePagination li a:visited,
+    .simplePagination li a:hover,
+    .simplePagination li a:active {
+        color: var(--pagination-color);
+        text-decoration: none;
+    }
+}
+
+@media screen and (min-width: 640px) {
+    .table {
+        display: table !important;
+        width: 100%;
+        border: none;
+    }
+
+    .table thead {
+        display: table-header-group;
+    }
+
+    .table tbody {
+        display: table-row-group;
+    }
+
+    .table tr {
+        display: table-row;
+    }
+
+    .table th,
+    .table td {
+        margin: 0px;
+        display: table-cell;
+        padding: 10px;
+    }
+
+    .links-table td.from_path{
+        width:20%;
+    }
+
+    .links-table td.to_url{
+        width: 80%;
+    }
+
+    .links-table td.delete,
+    .links-table td.edit {
+        min-width: 100px;
+    }
+
+    .links-table td.locals {
+        min-width: 50px;
+    }    
+
+}
+
+@media screen and (min-width: 768px) {
+    #mainNewShortlink .form-input {
+        margin-bottom: 0px;
+    }
+
+    #mainNewShortlink .container form {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        column-gap: 20px;
+    }
+}
+
+@media screen and (min-width: 1200px) {
+    .nav {
+        display: block;
+    }
+
+    #mainNewShortlink .container form {
+        grid-template-columns: 2fr 2fr 1fr;
+    }
+}
