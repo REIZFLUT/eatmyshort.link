@@ -11,8 +11,8 @@ class Session
         session_start();
 
 
-        $_SESSION['__CSRF_Token'] = (isset($_SESSION['__CSRF_Token'])) ? 
-        $_SESSION['__CSRF_Token']:hash('sha256', 'CONTINY_SESSION' . Config::get('app/secret').microtime());
+        $_SESSION['__CSRF_Token'] = (isset($_SESSION['__CSRF_Token'])) ?
+            $_SESSION['__CSRF_Token'] : hash('sha256', 'CONTINY_SESSION' . Config::get('app/secret') . microtime());
 
         if (!isset($_SESSION['canary'])) {
             session_regenerate_id(true);
@@ -32,7 +32,7 @@ class Session
         if (isset($_SESSION['uniqueImpression'])) {
             $oldUniqueHash = $_SESSION['uniqueImpression'];
             unset($_SESSION['uniqueData_' . $oldUniqueHash]);
-            unset($_SESSION['uniqueOldVal_'.$oldUniqueHash]);
+            unset($_SESSION['uniqueOldVal_' . $oldUniqueHash]);
         }
 
         if (isset($_SESSION['nextUniqueImpression'])) {
@@ -116,8 +116,8 @@ class Session
         return isset($_SESSION[$key]);
     }
 
-    public static function existsAssoc($key, $subkey){
+    public static function existsAssoc($key, $subkey)
+    {
         return isset($_SESSION[$key][$subkey]);
     }
-
 }

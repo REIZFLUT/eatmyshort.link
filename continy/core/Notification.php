@@ -11,21 +11,21 @@ class Notification
         return Session::getAssoc('uniqueData_' . $hash, $key);
     }
 
-    public static function toast($key, $class='', $attrAssoc = []){
+    public static function toast($key, $class = '', $attrAssoc = [])
+    {
 
         $content = self::get($key);
 
-        if(!empty($content)){
+        if (!empty($content)) {
             $output  = '<div ';
-            $output .= (!empty($class)) ? 'class="'.$class.'"':'';
-            foreach($attrAssoc as $key => $val){
-                $output .= $key.'="'.$val.'"';
+            $output .= (!empty($class)) ? 'class="' . $class . '"' : '';
+            foreach ($attrAssoc as $key => $val) {
+                $output .= $key . '="' . $val . '"';
             }
-            $output .= '>'.$content.'</div>'."\n";
+            $output .= '>' . $content . '</div>' . "\n";
             return $output;
         } else {
             return '';
         }
     }
-
 }

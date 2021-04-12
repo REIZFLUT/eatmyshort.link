@@ -77,12 +77,12 @@ class Token extends Model
         return $user;
     }
 
-    public static function cleanUp(){
+    public static function cleanUp()
+    {
         $ea = intval(Config::get('auth/tokenExpires')) * 60;
         $ts = time() - $ea;
         $expired = date('Y-m-d H:i:s', $ts);
 
         MySQL::query('DELETE FROM tokens WHERE ts < ?', [$expired]);
-        
     }
 }

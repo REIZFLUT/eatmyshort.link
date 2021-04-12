@@ -1,15 +1,10 @@
 <?php
 
-use App\Models\EMSLConfig;
 use Continy\Core\Notification;
 use Continy\Core\Html;
-use App\Models\User;
-use Continy\Core\Config;
 use Continy\Core\Language;
-use Continy\Core\OldVal;
-use Continy\Core\Route;
 
-$pwd_require = ($create) ? ['required' => 'required']:[];
+$pwd_require = ($create) ? ['required' => 'required'] : [];
 
 ?>
 
@@ -18,7 +13,7 @@ $pwd_require = ($create) ? ['required' => 'required']:[];
 <zone:body>
     <main id="myaccount">
         <div id="editMyAccount" class="center-360 py-20">
-            <h3><?php echo ($create) ?  Language::get('emsl/label/user-account-create'):Language::get('emsl/label/user-account').' #'.$user->id; ?></h3>
+            <h3><?php echo ($create) ?  Language::get('emsl/label/user-account-create') : Language::get('emsl/label/user-account') . ' #' . $user->id; ?></h3>
             <?= Html::formPostStart($postTo); ?>
             <div class="input-wrapper">
                 <?= Html::input('email',    'email',        $user->email ?? '', ['required' => 'required'], 'emsl'); ?>
@@ -30,10 +25,10 @@ $pwd_require = ($create) ? ['required' => 'required']:[];
                 <?= Html::input('text',     'lastname',     $user->lastname ?? '', [], 'emsl'); ?>
             </div>
             <div class="input-wrapper">
-                <?= Html::input('password', 'password_new', '', $pwd_require , 'emsl'); ?>
+                <?= Html::input('password', 'password_new', '', $pwd_require, 'emsl'); ?>
             </div>
             <div class="input-wrapper">
-                <?= Html::input('password', 'password_cfm', '', $pwd_require , 'emsl'); ?>
+                <?= Html::input('password', 'password_cfm', '', $pwd_require, 'emsl'); ?>
             </div>
             <hr>
             <div class="py-20">

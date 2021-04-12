@@ -70,7 +70,7 @@ class MySQL
                 $re = ($objType == NULL) ? $qu->fetchAll($fetchMode) : $qu->fetchAll($fetchMode, $objType);
                 return $re;
             } catch (PDOException $e) {
-                
+
                 return [];
             }
         } else {

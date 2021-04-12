@@ -13,9 +13,7 @@ class ValidationError{
         $this->key = $key;
         $this->value = $value;
         $this->rule = $rule;
-        $this->message = 'Dieses Feld weißt einen Fehler auf.'; 
-
-
+        $this->message = Language::get('default/message/ValidationError'); 
     }
 
 }

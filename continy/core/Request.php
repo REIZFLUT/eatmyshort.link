@@ -261,5 +261,4 @@ class Request
             die('Unknown request method');
         }
     }
-
 }

@@ -76,8 +76,8 @@ class Route
         return isset($this->auth['token']) ? $this->auth['token'] : [];
     }
 
-    public static function current(){
-        return (isset($_SERVER['PATH_INFO'])) ? $_SERVER['PATH_INFO']:'/';
+    public static function current()
+    {
+        return (isset($_SERVER['PATH_INFO'])) ? $_SERVER['PATH_INFO'] : '/';
     }
-
 }

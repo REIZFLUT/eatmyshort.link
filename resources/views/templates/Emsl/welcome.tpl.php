@@ -6,12 +6,7 @@ use Continy\Core\Html;
 use Continy\Core\Config;
 use Continy\Core\Language;
 
-?>
-
-<zone:head>
-
-</zone:head>
-<?= view_template('Emsl/mainnavi'); ?>
+echo view_template('Emsl/mainnavi'); ?>
 <zone:body>
     <main>
         <div id="mainNewShortlink">
@@ -35,14 +30,12 @@ use Continy\Core\Language;
             </div>
         </div>
 
-
         <div class="container">
             <form method="GET" action="<?= Config::get('app/url') ?>/shortlink" enctype="application/x-www-form-urlencoded" class="searchForm">
                 <?= Html::input('search', 'q', $_GET['q'] ?? '', ['class' => 'searchInput', 'onsearch' => 'checkClearSearch(this.value)'], 'emsl'); ?>
                 <?= Html::submitBtn('search', ['class' => 'searchBtn'], 'emsl'); ?>
             </form>
         </div>
-
 
         <div class="container">
             <table class="table table-striped table-responsive">
@@ -84,7 +77,6 @@ use Continy\Core\Language;
             <?= Html::simplePagination($list->pagination['max'], $list->pagination['query']); ?>
         </div>
     </main>
-
 
     <div class="toasts">
         <?= Notification::toast('from_path', 'toast fadeOut toast-invalid'); ?>

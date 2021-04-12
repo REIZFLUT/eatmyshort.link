@@ -27,7 +27,8 @@ class App
         );
     }
 
-    public function setTimezone($identifier){
+    public function setTimezone($identifier)
+    {
         date_default_timezone_set($identifier);
     }
 

@@ -93,15 +93,13 @@ class ShortlinkController
                 $counter->sl_id = $shortlink->id;
                 $counter->path = $path;
                 $counter->auto();
-                                
             } else {
-                if(EMSLConfig::bool('forwardAll')){
+                if (EMSLConfig::bool('forwardAll')) {
                     $url = EMSLConfig::get('defaultDomain') . '/' . $path;
                 } else {
                     http_response_code(404);
                     return view('public', 'Default/notfound');
                 }
-                
             }
 
             header('Location: ' . $url);

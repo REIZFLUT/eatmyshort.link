@@ -124,16 +124,19 @@ class Model
         }
     }
 
-    public function getTable(){
+    public function getTable()
+    {
         return $this->table;
     }
 
-    public function getFields(){
+    public function getFields()
+    {
         return $this->fields;
     }
 
-    public function import($assoc){
-        foreach($assoc as $key => $val){
+    public function import($assoc)
+    {
+        foreach ($assoc as $key => $val) {
             $this->$key = $val;
         }
     }
@@ -160,6 +163,4 @@ class Model
 
         return $this->fields;
     }
-
-
 }

@@ -1,22 +1,18 @@
 <?php
 
-use App\Models\EMSLConfig;
 use Continy\Core\Notification;
 use Continy\Core\Html;
-use App\Models\User;
-use Continy\Core\Config;
 use Continy\Core\Language;
-use Continy\Core\Route;
 
 ?>
 
 <?= view_template('Emsl/mainnavi'); ?>
 
 <zone:body>
-    <main id="setting">      
+    <main id="setting">
         <div id="editSetting" class="center-360 py-20">
-        <h3><?= Language::get('emsl/label/setting'); ?></h3>
-            <?= Html::formPostStart('/setting/edit/'.$config->id); ?>
+            <h3><?= Language::get('emsl/label/setting'); ?></h3>
+            <?= Html::formPostStart('/setting/edit/' . $config->id); ?>
             <div class="input-wrapper">
                 <?= Html::input('text', 'k',  $config->k, ['disabled' => 'disabled'], 'emsl'); ?>
             </div>
@@ -25,14 +21,14 @@ use Continy\Core\Route;
             </div>
             <div class="input-wrapper">
                 <?= Html::submitBtn('save', ['class' => 'btn btn-block text-center btn-primary'], 'emsl'); ?>
-            </div>           
+            </div>
         </div>
         <div id="settingDescription" class="center-360 py-20">
-        <?= Language::get('emsl/description/setting/'.$config->k); ?>
+            <?= Language::get('emsl/description/setting/' . $config->k); ?>
         </div>
     </main>
 
     <div class="toasts">
-    <?= Notification::toast('success', 'toast fadeOut toast-success') ?>
+        <?= Notification::toast('success', 'toast fadeOut toast-success') ?>
     </div>
 </zone:body>

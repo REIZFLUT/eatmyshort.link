@@ -75,17 +75,16 @@ class Validation
         }
     }
 
-    public static function secure_password($key, $value){
+    public static function secure_password($key, $value)
+    {
         if (strlen($value) < 8) {
             return new ValidationError($key, $value, 'password_to_short');
-        } elseif(!preg_match("#[0-9]+#", $value)){
+        } elseif (!preg_match("#[0-9]+#", $value)) {
             return new ValidationError($key, $value, 'password_no_number');
-        } elseif(!preg_match("#[a-zA-Z]+#", $value)){
+        } elseif (!preg_match("#[a-zA-Z]+#", $value)) {
             return new ValidationError($key, $value, 'password_no_letter');
         } else {
             return false;
         }
-
-
     }
 }

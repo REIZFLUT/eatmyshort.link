@@ -29,14 +29,15 @@ class UserController
 
     public function create(Request $request)
     {
-        
+
         $user = new User(false);
         $user->id = 0;
         $user->roles = [];
         return view('default', 'emsl/useredit', ['user' => $user, 'create' => true, 'postTo' => '/user/create']);
     }
 
-    public function make(Request $request){
+    public function make(Request $request)
+    {
 
         $keep = [];
         $user = new User(false);
@@ -52,20 +53,20 @@ class UserController
 
         $user->roles = $newRoles;
 
-        if(!User::exists($user->email)){
+        if (!User::exists($user->email)) {
             if (!empty($request->input->password_new)) {
                 if ($request->input->password_new == $request->input->password_cfm) {
                     $valid = new Validation([
                         'email'         => ['email', 'required'],
                         'password_new'  => ['required', 'secure_password']
                     ]);
-    
+
                     if ($valid->check($request)) {
                         $user->setNewPwd($request->input->password_new);
-                        
+
                         $user->create();
-    
-    
+
+
                         return redirect('/user/edit/' . $user->id, ['success' => 'User successfully created']);
                     } else {
                         return redirect('/user/create/', ['fail_insecure' => 'Insecure password'], $keep);
@@ -76,13 +77,10 @@ class UserController
             } else {
                 $user->create();
                 return redirect('/user/create/', ['success' => 'User successfully updated'], $keep);
-            } 
+            }
         } else {
             return redirect('/user/create/', ['success' => 'User already exists'], $keep);
         }
-       
-
-
     }
 
 
@@ -111,9 +109,8 @@ class UserController
 
                 if ($valid->check($request)) {
                     $user->setNewPwd($request->input->password_new);
-                    
-                    $user->update();
 
+                    $user->update();
 
                     return redirect('/user/edit/' . $user->id, ['success' => 'User successfully updated']);
                 } else {

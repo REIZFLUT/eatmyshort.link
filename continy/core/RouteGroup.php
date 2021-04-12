@@ -24,7 +24,7 @@ class RouteGroup
         $this->routes  = (isset($args['routes'])) ? $args['routes'] : [];
         $this->auth    = (isset($args['auth'])) ? $args['auth'] : [];
         $this->csrf    = (isset($args['csrf'])) ? $args['csrf'] : true;
-        $this->session = (isset($args['session'])) ? $args['session']:true;
+        $this->session = (isset($args['session'])) ? $args['session'] : true;
     }
 
     public function getMatchingRoutes()

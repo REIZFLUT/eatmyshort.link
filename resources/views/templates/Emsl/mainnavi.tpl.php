@@ -5,8 +5,6 @@ use Continy\Core\Html;
 use App\Models\User;
 use Continy\Core\Config;
 ?>
-
-
 <zone:navi>
     <nav class="top-navi">
         <figure class="mainMenuLogoContainer">

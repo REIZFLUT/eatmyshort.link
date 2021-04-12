@@ -120,15 +120,14 @@ class User extends Model
         }
     }
 
-    public static function exists(string $email){
+    public static function exists(string $email)
+    {
         $email = filter_var($email, FILTER_SANITIZE_STRING);
         $result = MySQL::selectById('users', [$email], 'id', 'email');
-        if($result == false){
+        if ($result == false) {
             return false;
         } else {
-            return (count($result) > 0) ? true:false;
+            return (count($result) > 0) ? true : false;
         }
-        
-
     }
 }

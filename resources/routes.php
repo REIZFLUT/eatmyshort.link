@@ -12,7 +12,7 @@ return [
 		],
 		'routes' => [
 			['GET',  '/', 	   'ShortlinkController@forward'],
-			
+
 			['GET',  '/login', 'LoginController@index'],
 			['POST', '/login', 'LoginController@login'],
 		]
@@ -24,7 +24,7 @@ return [
 		'auth' => [
 			'user' => ['user', 'manager'],
 		],
-		'routes'  => [			
+		'routes'  => [
 			['GET', 	'/shortlink', 			'ShortlinkController@index'],
 			['POST', 	'/shortlink/create', 	'ShortlinkController@create'],
 
@@ -51,7 +51,7 @@ return [
 		'auth' => [
 			'user' => ['manager'],
 		],
-		'routes'  => [			
+		'routes'  => [
 			['GET', 	'/user', 			 'UserController@index'],
 
 			['GET', 	'/user/create', 	 'UserController@create'],
@@ -63,34 +63,8 @@ return [
 			['DELETE',	'/user/delete/{id}', 'UserController@delete'],
 
 			['GET', 	'/setting', 		 'SettingsController@index'],
-			['GET', 	'/setting/edit/{id}','SettingsController@edit'],
-			['POST', 	'/setting/edit/{id}','SettingsController@update']
-		]
-	],	
-	
-
-	// API Routes
-/*
-	'api' => [
-		'prefix' => 'api',
-		'csrf' => false,
-		'http403' => 'controller:DefaultController@ApiHttp403',
-		'http404' => 'controller:DefaultController@ApiHttp404',
-		'auth' => [
-			'token' => ['user'],
-		],
-		'routes' => [
-			['GET',  '/v1/test/{id}', 'TestController@api'],
-			['PATCH',  '/v1/test/{id}/update', 'TestController@apiEdit'],
-		]
-	],
-
-	'publicapi' => [
-		'prefix' => 'api',
-		'csrf' => false,
-		'routes' => [
-			['POST', '/v1/auth', 'ApiController@requestToken']
+			['GET', 	'/setting/edit/{id}', 'SettingsController@edit'],
+			['POST', 	'/setting/edit/{id}', 'SettingsController@update']
 		]
 	]
-	*/
 ];

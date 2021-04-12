@@ -11,7 +11,7 @@ use App\Models\EMSLConfig;
       <form method="POST">
         <?= Html::csrf(); ?>
         <div class="mb-20">
-        <img src="<?= EMSLConfig::get('topLogo'); ?>" id="mainMenuLogo" alt="">
+          <img src="<?= EMSLConfig::get('topLogo'); ?>" id="mainMenuLogo" alt="">
         </div>
         <div class="input-wrapper">
           <?= Html::input('email', 'email', '', ['required' => 'required'], 'login'); ?>
@@ -24,8 +24,6 @@ use App\Models\EMSLConfig;
         <div class="input-wrapper">
           <?= Html::submitBtn('submit', ['class' => 'btn btn-block text-center btn-primary'], 'login'); ?>
         </div>
-
-
       </form>
       <?= Notification::toast('loginFail'); ?>
 

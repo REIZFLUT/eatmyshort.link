@@ -17,7 +17,8 @@ class SettingsController
         return view('default', 'emsl/settingslist', ['list' => $config_list]);
     }
 
-    public function edit(Request $request, $id){
+    public function edit(Request $request, $id)
+    {
         $id = intval($id);
 
         $conf = new EMSLConfig();
@@ -26,13 +27,13 @@ class SettingsController
         return view('default', 'emsl/settingedit', ['config' => $conf]);
     }
 
-    public function update(Request $request, $id){
+    public function update(Request $request, $id)
+    {
         $id = intval($id);
         $conf = new EMSLConfig();
         $conf->findById($id);
         $conf->v = $request->iVal('v');
         $conf->update();
-        return redirect('/setting/edit/'.$id, ['success' => 'Setting successfully updated']);  
+        return redirect('/setting/edit/' . $id, ['success' => 'Setting successfully updated']);
     }
-
 }

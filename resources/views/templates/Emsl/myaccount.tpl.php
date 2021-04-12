@@ -9,9 +9,9 @@ use Continy\Core\Language;
 <?= view_template('Emsl/mainnavi'); ?>
 
 <zone:body>
-    <main id="myaccount">      
+    <main id="myaccount">
         <div id="editMyAccount" class="center-360 py-20">
-        <h3><?= Language::get('emsl/label/my-account'); ?></h3>
+            <h3><?= Language::get('emsl/label/my-account'); ?></h3>
             <?= Html::formPostStart('/user/account'); ?>
             <div class="input-wrapper">
                 <?= Html::input('email',    'email',        $user->email, ['disabled' => 'disabled'], 'emsl'); ?>
@@ -43,17 +43,17 @@ use Continy\Core\Language;
             <hr>
 
             <div class="py-20">
-                <?= Language::get('emsl/label/your-roles'); ?>: 
+                <?= Language::get('emsl/label/your-roles'); ?>:
                 <ul class="pills my-20">
-                <?= Html::li($user->roles, ['class' => 'pill']); ?>
+                    <?= Html::li($user->roles, ['class' => 'pill']); ?>
                 </ul>
                 <?= Language::get('emsl/description/your-roles'); ?>
 
             </div>
         </div>
-</main>
+    </main>
 
-<div class="toasts">
+    <div class="toasts">
         <?= Notification::toast('fail_insecure', 'toast fadeOut toast-invalid'); ?>
         <?= Notification::toast('fail_missmatch', 'toast fadeOut toast-invalid'); ?>
         <?= Notification::toast('fail_old_password', 'toast fadeOut toast-invalid') ?>

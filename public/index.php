@@ -8,5 +8,3 @@ use Continy\Core\Config;
 $app = new App;
 $app->setTimezone(EMSLConfig::get('timezone'));
 $app->run();
-
-var_dump($_SERVER);

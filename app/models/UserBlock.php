@@ -26,16 +26,18 @@ class UserBlock extends Model
         return $is;
     }
 
-    public static function setStatus(bool $is){
-        if($is){
+    public static function setStatus(bool $is)
+    {
+        if ($is) {
             Session::set('UserBlocked', true);
         } else {
             Session::unset('UserBlocked');
         }
     }
 
-    public static function getStatus(){
-
+    public static function getStatus()
+    {
+        return Session::get('UserBlocked');
     }
 
 
@@ -56,8 +58,9 @@ class UserBlock extends Model
         }
     }
 
-    public static function msg(){
-        if(Session::exists('UserBlocked')){
+    public static function msg()
+    {
+        if (Session::exists('UserBlocked')) {
             return Language::get('login/error/blocked');
         } else {
             return NULL;

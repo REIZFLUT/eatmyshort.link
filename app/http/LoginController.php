@@ -81,7 +81,8 @@ class LoginController
         //TODO: Send Token via E-Mail
     }
 
-    public function resetPassword(){
+    public function resetPassword()
+    {
         //TODO: check token and reset Password
     }
 

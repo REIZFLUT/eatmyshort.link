@@ -9,10 +9,6 @@ use App\Models\UserBlock;
 
 class Router
 {
-
-    private $routes;
-
-
     public static function run(Request $request, array $available_routes)
     {
         $route = self::findRoute($available_routes, $request);
