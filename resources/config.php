@@ -8,7 +8,8 @@ return [
     'mysql' => [
         'database' => 'emsl',
         'user' => 'emsl',
-        'password' => 'emslemsl1234'
+        'password' => 'emslemsl1234',
+        'test' => 'abc'
     ],
     'mail' => [
         'from' => 'noreply@reizflut.com',
