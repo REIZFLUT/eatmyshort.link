@@ -34,6 +34,14 @@ class ShortlinkController
         return view('default', 'Emsl/welcome', ['list' => $sl_list]);
     }
 
+    public function edit(Request $request)
+    {
+    }
+
+    public function update(Request $request)
+    {
+    }
+
     public function create(Request $request)
     {
 

@@ -123,7 +123,8 @@ class User extends Model
     public static function exists(string $email)
     {
         $email = filter_var($email, FILTER_SANITIZE_STRING);
-        $result = MySQL::selectById('users', [$email], 'id', 'email');
+        $result = MySQL::selectById('users', $email, 'id', 'email');
+       
         if ($result == false) {
             return false;
         } else {

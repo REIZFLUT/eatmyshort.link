@@ -15,6 +15,10 @@ return [
 
 			['GET',  '/login', 'LoginController@index'],
 			['POST', '/login', 'LoginController@login'],
+			['GET', '/login/forgot', 'LoginController@forgotPwd'],
+			['POST', '/login/forgot', 'LoginController@sendPasswordLink'],
+			['GET', '/login/reset', 'LoginController@resetPwd'],
+			['POST', '/login/reset', 'LoginController@resetPwdUpdate'],
 		]
 	],
 

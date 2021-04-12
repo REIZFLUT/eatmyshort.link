@@ -2,6 +2,8 @@
 
 namespace App\Http;
 
+use App\Models\Mail;
+use App\Models\PasswordReset;
 use Continy\Core\Request;
 use Continy\Core\Validation;
 use Continy\Core\Auth;
@@ -72,19 +74,102 @@ class LoginController
 
     public function forgotPwd(Request $request)
     {
-        //TODO: Provide view to enter valid email
-        // if valid token provided: do password reset
+        PasswordReset::cleanUp();
+        return view('default', 'Login/forgot');
     }
 
     public function sendPasswordLink(Request $request)
     {
-        //TODO: Send Token via E-Mail
+        $email = $request->iVal('email', 'email');
+        $validator = new Validation(['email' => ['email', 'required']]);
+
+        if ($validator->check($request)) {
+
+            $user = new User(false);
+            $user->findByEmail($email);
+
+            if ($user->id > 0) {
+
+                $resetPassword = new PasswordReset();
+                $resetPassword->autoCreate($user->email);
+
+                $mail = new Mail();
+                $mail->to($user->email, trim($user->firstname . ' ' . $user->lastname));
+                $mail->subject(Language::get('login/forgotmail/subject'));
+
+                $mailBody = view('mail', 'Mail/forgotpassword', ['reset' => $resetPassword], true);
+                $textBody = text('Mail/forgotpassword', ['reset' => $resetPassword], false);
+                $mail->htmlBody($mailBody);
+                $mail->textBody($textBody);
+                $mail->send();
+
+                redirect('/login/forgot', ['success' => Language::get('login/success/resetMailSent')], ['email' => $email]);
+            } else {
+                redirect('/login/forgot', ['fail' => Language::get('login/error/unknownEmail')], ['email' => $email]);
+            }
+        } else {
+            redirect('/login/forgot', $validator->getErrorMessages(), ['email' => $email]);
+        }
     }
 
-    public function resetPassword()
+    public function resetPwd(Request $request)
     {
-        //TODO: check token and reset Password
+        PasswordReset::cleanUp();
+        return view('default', 'Login/reset');
     }
+
+    public function resetPwdUpdate(Request $request){
+        PasswordReset::cleanUp();
+        $email = $request->iVal('email', 'email');
+        $token = $request->iVal('token');
+
+        
+
+        if(PasswordReset::valid($email, $token)){
+
+            if(User::exists($email)){
+                $user = new User(false);
+                $user->findByEmail($email);
+
+                if ($request->input->password_new == $request->input->password_cfm) {
+
+                    $valid = new Validation([
+                        'email'        => ['required'],
+                        'password_new' => ['required', 'secure_password'],
+                        'password_cfm' => ['required']
+                    ]);
+    
+                    if ($valid->check($request)) {
+                        $user->setNewPwd($request->input->password_new);
+                        $user->update();
+                        PasswordReset::remove($email);
+                        return redirect('/login', ['success' => 'User successfully updated']);
+                    } else {
+                        return redirect('/login/reset?token='.$token.'&email='.$email, $valid->getErrorMessages());
+                    }
+                } else {
+                    return redirect('/login/reset?token='.$token.'&email='.$email, ['fail' => 'Password confirmation failed']);
+                }
+
+            } else {
+                return redirect('/login/reset?token='.$token.'&email='.$email, ['fail' => 'User does not exist.']);
+            }
+
+        } else {
+            return redirect('/login/reset', ['fail' => 'Invalid token.']);
+        }
+
+
+            
+
+            
+        
+
+
+
+
+    }
+
 
     public function logout()
     {

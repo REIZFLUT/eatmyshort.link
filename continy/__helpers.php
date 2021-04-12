@@ -112,11 +112,11 @@ if (!function_exists('view_template')) {
 }
 
 if (!function_exists('view')) {
-    function view(string $layout, string $template, array $data = [])
+    function view(string $layout, string $template, array $data = [], bool $to_string = false)
     {
         extract($data);
-        $layout_path = ResourcesDir('/Views/Layouts/' . $layout . '.layout.php');
-        $template_path = ResourcesDir('/Views/Templates/' . $template . '.tpl.php');
+        $layout_path = ResourcesDir('/views/layouts/' . $layout . '.layout.php');
+        $template_path = ResourcesDir('/views/templates/' . $template . '.tpl.php');
 
         $debug = debug_backtrace();
 
@@ -157,13 +157,42 @@ if (!function_exists('view')) {
                 $output = preg_replace('/<zone\:(.*?) \/>/is', '', $output_prepare);
 
                 $beauty = new BeautifyHTML();
-                echo $beauty->beautify($output);
+                if ($to_string) {
+                    return $beauty->beautify($output);
+                } else {
+                    echo $beauty->beautify($output);
+                }
             } else {
-                echo 'Template could not be found';
+                if ($to_string) {
+                    return 'Template could not be found';
+                } else {
+                    echo 'Template could not be found';
+                }
             }
         } else {
-            echo 'Layout could not be found';
+            if ($to_string) {
+                return 'Layout could not be found';
+            } else {
+                echo 'Layout could not be found';
+            }
         }
+    }
+}
+
+if (!function_exists('text')) {
+    function text(string $template, array $data, $allowHtml = true)
+    {
+        extract($data);
+        $output = '';
+        $template_path = ResourcesDir('/texts/' . $template . '.text.php');
+        if (file_exists($template_path)) {
+            ob_start();
+            include $template_path;
+            $output = ob_get_clean();
+        } else {
+            return 'No text template found.';
+        }
+        return ($allowHtml) ? $output:strip_tags($output);
     }
 }
 
@@ -202,5 +231,13 @@ if (!function_exists('ctrlRunner')) {
         $ctrlName = 'App\\Http\\' . $controller;
         $ctrl = new $ctrlName();
         return $ctrl->$method($request, $id);
+    }
+}
+
+if (!function_exists('dd')) {
+    function dd($var)
+    {
+        var_dump($var);
+        die();
     }
 }

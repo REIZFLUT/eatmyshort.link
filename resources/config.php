@@ -10,4 +10,17 @@ return [
         'user' => 'emsl',
         'password' => 'emslemsl1234'
     ],
+    'mail' => [
+        'from' => 'noreply@reizflut.com',
+        'useSMTP' => true,
+        'smtp' => [
+            'host' => 'smtp.ionos.de',
+            'auth' => true,
+            'user' => 'info@reizflut.com',
+            'password' => 'nitnat$onK76201028!',
+            'encryption' => 'tls',
+            'port' => 587
+        ]
+    ]
+
 ];

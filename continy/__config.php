@@ -28,6 +28,7 @@ return [
         'blockUser'         => 5, //minutes
         'blockIP'           => 5, //minutes
         'blockIPWhen'       => 5, // when n Users are blocked from this IP
+        'resetTokenExpires' => 10,
         'rolesAvailable'    => ['user', 'manager', 'admin'], // roles asignable to users
         'userDefaultRoles'  => ['user'], // role(s) a user gets automaticly after registration
         'superRoles'        => ['admin'] //role(s) a user can do everything with (be carefull!)

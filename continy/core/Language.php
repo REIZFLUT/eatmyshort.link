@@ -102,6 +102,21 @@ class Language
         }
     }
 
+    public static function routeLink($lngPath, $routePath, $attrAssoc = []){
+        $content = self::get($lngPath);
+        $route = Config::get('app/url').$routePath;
+        $output = '<a href="'.$route.'"';
+
+        foreach($attrAssoc as $key => $val){
+            $output .= ' '.$key.'="'.$val.'"';
+        }
+
+        $output .= '>'.$content.'</a>';
+
+        return $output;
+    }
+
+
     public static function exists($path = '')
     {
         return !empty(self::get($path));
