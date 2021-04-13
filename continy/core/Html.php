@@ -299,4 +299,15 @@ class Html
 
         return $output;
     }
+
+    public static function OptionsFromList(array $assoc, string $selectedVal = '', array $attrAssoc = []){
+
+        $output = '';
+        foreach($assoc as $val => $content){
+            $output .= "\t".'<option value="'.$val.'">'.$content.'</option>'."\n";
+        }
+
+        return $output;
+    }
+
 }

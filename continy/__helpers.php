@@ -152,6 +152,8 @@ if (!function_exists('view')) {
                     }
 
                     $output_prepare = str_replace($replace['tags'], $replace['contents'], $layout_str);
+                } else {
+                    $output_prepare = '';
                 }
 
                 $output = preg_replace('/<zone\:(.*?) \/>/is', '', $output_prepare);

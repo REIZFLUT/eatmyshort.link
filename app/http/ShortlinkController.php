@@ -34,8 +34,12 @@ class ShortlinkController
         return view('default', 'Emsl/welcome', ['list' => $sl_list]);
     }
 
-    public function edit(Request $request)
+    public function edit(Request $request, $id)
     {
+        $id = intval($id);
+        $shortlink = new Shortlink(true);
+        $shortlink->findById($id);
+        return view('default', 'Emsl/edit', ['shortlink' => $shortlink]);
     }
 
     public function update(Request $request)
