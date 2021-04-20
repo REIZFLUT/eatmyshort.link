@@ -24,7 +24,7 @@ echo view_template('Emsl/mainnavi'); ?>
                     <?= Html::input('url', 'to_url', '', ['required' => 'required'], 'emsl') ?>
                 </div>
                 <div class="form-input">
-                    <?= Html::submitBtn('create', [], 'emsl') ?>
+                    <?= Html::submitBtn('create', ['class' => 'btn btn-block btn-primary'], 'emsl') ?>
                 </div>
                 <?= Html::formEnd() ?>
             </div>

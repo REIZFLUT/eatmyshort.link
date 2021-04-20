@@ -73,7 +73,10 @@ class Shortlink extends Model
 
     public function locals()
     {
-        $this->locals = $this->getLocals();
+        if (!isset($this->locals)) {
+            $this->locals = $this->getLocals();
+        }
+        return $this->locals;
     }
 
     public function getLocals()
@@ -82,4 +85,18 @@ class Shortlink extends Model
         $collection->allFromForeignId('sl_id', $this->id);
         return $collection;
     }
+
+    public function getLocalCodes(){
+        $result = MySQL::query('SELECT lng FROM localisations WHERE sl_id = ?', [$this->id]);
+        if ($result == false) {
+            return [];
+        } else{
+            $codes = [];
+            foreach($result as $local){
+                $codes[] = $local['lng'];
+            }
+            return $codes;
+        }
+    }
+
 }

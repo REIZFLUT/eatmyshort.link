@@ -7,9 +7,11 @@ use App\Models\EMSLConfig;
 use App\Models\Shortlink;
 use App\Models\Localisation;
 use App\Models\User;
+use Continy\Core\BrowserLanguage;
 use Continy\Core\Language;
 use Continy\Core\Request;
 use Continy\Core\Collection;
+use Continy\Core\Config;
 use Continy\Plugin\EMSLValidation;
 
 class ShortlinkController
@@ -39,7 +41,19 @@ class ShortlinkController
         $id = intval($id);
         $shortlink = new Shortlink(true);
         $shortlink->findById($id);
-        return view('default', 'Emsl/edit', ['shortlink' => $shortlink]);
+
+        $makeAvailableStr = EMSLConfig::get('availableLocalisationLanguages');
+        if($makeAvailableStr == 'all'){
+            $availableLangs = Language::getAllLngCodes();
+        } else {
+            $makeAvailable = explode(',', $makeAvailableStr);
+            $availableLangs = Language::getExistingLngCodes($makeAvailable);
+        }
+
+
+
+
+        return view('default', 'Emsl/edit', ['shortlink' => $shortlink, 'availableLangs' => $availableLangs]);
     }
 
     public function update(Request $request)
@@ -87,24 +101,38 @@ class ShortlinkController
 
         if (isset($_SERVER['PATH_INFO'])) {
             $path = substr($_SERVER['PATH_INFO'], 1);
-            $lang = Language::shortFromBrowser();
             $url = '';
-
+            $browserLang = new BrowserLanguage();
             $shortlink = new Shortlink(true);
             if ($shortlink->pathExists($path)) {
                 $shortlink->loadFromPath($path);
-                if ($shortlink->hasLocal($lang)) {
-                    $localisation = new Localisation(true);
-                    $localisation->loadSlidLng($shortlink->id, $lang);
-                    $url = $localisation->to_url;
+                if ($shortlink->hasLocals()) {
+
+                    $lngCodes = $shortlink->getLocalCodes();                    
+                    $lng = $browserLang->bestMatch($lngCodes);
+                    
+                    if($lng['q'] == 0){
+                        $url = $shortlink->to_url;
+                    } else {
+                        $localisation = new Localisation(true);
+                        $localisation->loadSlidLng($shortlink->id, $lng['lng']);
+                        if(!empty($localisation->to_url)){
+                            $url = $localisation->to_url;
+                        } else {
+                            $url = $shortlink->to_url;
+                        }
+                        
+                    }
                 } else {
                     $url = $shortlink->to_url;
                 }
 
+                // COUNT Redirection
                 $counter = new Count();
                 $counter->sl_id = $shortlink->id;
                 $counter->path = $path;
                 $counter->auto();
+
             } else {
                 if (EMSLConfig::bool('forwardAll')) {
                     $url = EMSLConfig::get('defaultDomain') . '/' . $path;

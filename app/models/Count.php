@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Continy\Core\BrowserLanguage;
 use Continy\Core\Language;
 use Continy\Core\Model;
 use Continy\Plugin\Browser;
@@ -21,6 +22,7 @@ class Count extends Model
     {
         if (self::isUsed()) {
             $browser = new Browser();
+            $browserLang = new BrowserLanguage();
             $this->browser_name     = $browser->getBrowser();
             $this->browser_version  = $browser->getVersion();
             $this->platform         = $browser->getPlatform();
@@ -34,12 +36,11 @@ class Count extends Model
                 $device = 'robot';
             }
 
-            $this->device = $device;
-            $this->remote_ip = (isset($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '';
-            $this->lang = Language::shortFromBrowser();
+            $this->device = (isset($this->device)) ? $this->device:$device;
+            $this->remote_ip = (isset($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : $this->remote_ip;
+            $this->lang = (isset($this->lang)) ? $this->lang:$browserLang->getMainLng();
 
             if (self::countryOnForward()) {
-
                 if (filter_var($this->remote_ip, FILTER_VALIDATE_IP)) {
                     $this->country = self::getCountryFromIp($this->remote_ip);
                 }

@@ -302,9 +302,15 @@ class Html
 
     public static function OptionsFromList(array $assoc, string $selectedVal = '', array $attrAssoc = []){
 
+        $attr = '';
+        foreach ($attrAssoc as $key => $value) {
+            $attr .= $key . '="' . $value . '" ';
+        }
+
         $output = '';
         foreach($assoc as $val => $content){
-            $output .= "\t".'<option value="'.$val.'">'.$content.'</option>'."\n";
+            $selected = ($val == $selectedVal) ? ' selected':'';
+            $output .= "\t".'<option value="'.$val.'" '.$attr.$selected.'>'.$content.'</option>'."\n";
         }
 
         return $output;

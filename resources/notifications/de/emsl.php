@@ -58,7 +58,9 @@ return [
     'button' => [
         'create' => 'Shortlink erstellen',
         'search' => 'Suche',
-        'save'   => 'Speichern'
+        'save'   => 'Speichern',
+        'addLocal' => 'Lokalisierung hinzufügen',
+        'delete'    => 'Löschen'
     ],
     'success' => [
         'created' => 'Der Shortlink wurde erfolgreich erstellt',

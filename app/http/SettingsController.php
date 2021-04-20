@@ -3,6 +3,7 @@
 namespace App\Http;
 
 use App\Models\EMSLConfig;
+use App\Models\Shortlink;
 use Continy\Core\Request;
 use Continy\Core\Collection;
 
@@ -24,7 +25,10 @@ class SettingsController
         $conf = new EMSLConfig();
         $conf->findById($id);
 
-        return view('default', 'emsl/settingedit', ['config' => $conf]);
+        $shortlink = new Shortlink(true);
+        $shortlink->findById($id);
+       
+        return view('default', 'emsl/settingedit', ['config' => $conf, 'shortlink' => $shortlink]);
     }
 
     public function update(Request $request, $id)
