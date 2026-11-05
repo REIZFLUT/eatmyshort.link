@@ -30,7 +30,7 @@ Kurzfassung:
 
 ```bash
 composer install --no-dev -a
-cp docs/examples/env.local.dist .env.local   # anpassen
+cp .env.example .env                      # Werte anpassen
 php bin/console doctrine:migrations:migrate -n
 php bin/console asset-map:compile
 php bin/console app:user:create admin@firma.de "Admin" --admin

@@ -7,6 +7,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    env:
+      # Ohne .env im Repo braucht die App ihre Konfiguration als echte Umgebungsvariablen.
+      APP_ENV: dev
+      APP_SECRET: 'ci-only-secret-0123456789abcdef0123456789abcdef'
+      APP_ADMIN_HOSTS: admin.emsl.test
+      DEFAULT_URI: http://localhost
+      DATABASE_URL: 'sqlite:///%kernel.project_dir%/var/data/ci.sqlite'
+      MAILER_DSN: null://null
+      MAILER_FROM: 'EatMyShort.Link <noreply@localhost>'
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2

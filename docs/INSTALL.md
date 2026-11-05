@@ -29,7 +29,7 @@ Alle Namen zeigen per DNS (A/AAAA oder CNAME) auf denselben Server und landen im
 cd /var/www
 git clone https://github.com/REIZFLUT/eatmyshort.link.git eatmyshort
 cd eatmyshort
-cp docs/examples/env.local.dist .env.local      # Werte anpassen, siehe unten
+cp .env.example .env                            # Werte anpassen, siehe unten
 composer install --no-dev --optimize-autoloader --classmap-authoritative
 php bin/console doctrine:migrations:migrate --no-interaction
 php bin/console asset-map:compile
@@ -43,6 +43,44 @@ PHP-FPM-Nutzer beschreibbar sein:
 ```bash
 chown -R www-data:www-data var
 ```
+
+## Konfiguration ohne .env im Repository
+
+Im Repository liegt **keine** `.env`-Datei (`.env.local` und `.env.test` sind
+git-ignoriert), sondern nur die Vorlage **`.env.example`**. Beim Start lädt die
+Anwendung in dieser Reihenfolge:
+
+1. `.env`, falls vorhanden – sonst ersatzweise `.env.local` (git-ignoriert);
+2. im Testlauf ausschließlich `.env.test` (git-ignoriert).
+
+`.env.example` wird **nie** automatisch geladen; sie ist nur eine Kopiervorlage.
+
+**Variante 1 – echte Umgebungsvariablen (empfohlen für Produktion).** Im
+PHP-FPM-Pool:
+
+```ini
+env[APP_ENV] = prod
+env[APP_SECRET] = <32+ zufällige Zeichen>
+env[APP_ADMIN_HOSTS] = links.firma.de
+env[DEFAULT_URI] = https://links.firma.de
+```
+
+oder in nginx, z. B. `fastcgi_param APP_ENV prod;` (dann auch die übrigen Werte).
+Reale Umgebungsvariablen haben Vorrang vor jeder `.env`-Datei.
+
+**Variante 2 – `.env` aus der Vorlage (einfach, bleibt git-ignoriert).**
+
+```bash
+cp .env.example .env        # Werte anpassen; für Produktion APP_ENV=prod und APP_SECRET setzen
+```
+
+**Ohne beides startet die App nicht:** Fehlt eine dot-env-Datei und ist `APP_ENV`
+nicht als echte Umgebungsvariable gesetzt, bricht der Start mit einer klaren
+Meldung ab, statt still im Dev-Modus (mit Debug) zu laufen.
+
+`.env` und `.env.local` dürfen **niemals** ins Repository. `bin/deploy.sh` liefert
+keine Umgebungsvariablen mit – sie bleiben im FPM-Pool bzw. in einer nicht
+versionierten `.env`-Datei auf dem Server.
 
 ### `.env.local`
 
