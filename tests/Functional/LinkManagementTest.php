@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Entity\Click;
 use App\Entity\Link;
 
 final class LinkManagementTest extends AppTestCase
@@ -123,5 +124,56 @@ final class LinkManagementTest extends AppTestCase
         self::assertResponseRedirects('/links');
         $this->em()->clear();
         self::assertNull($this->em()->find(Link::class, $link->getId()));
+    }
+
+    public function testDuplicateLocalisationLanguagesAreRejected(): void
+    {
+        $user = $this->createUser('user@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/links/new');
+        $form = $crawler->selectButton('Link anlegen')->form();
+        $values = $form->getPhpValues();
+        $values['link']['targetUrl'] = 'https://www.example.com/';
+        $values['link']['domain'] = (string) $domain->getId();
+        $values['link']['code'] = 'doppelt';
+        $values['link']['localisations'] = [
+            ['language' => 'en', 'targetUrl' => 'https://www.example.com/en'],
+            ['language' => 'EN', 'targetUrl' => 'https://www.example.com/en-2'],
+        ];
+        $this->client->request('POST', $form->getUri(), $values, server: ['HTTP_ORIGIN' => 'http://'.self::ADMIN_HOST]);
+
+        self::assertResponseStatusCodeSame(422, 'a duplicate language must not become a database 500');
+        self::assertSelectorTextContains('.errors', 'Jede Sprache');
+        self::assertNull($this->em()->getRepository(Link::class)->findOneBy(['code' => 'doppelt']));
+    }
+
+    public function testExportStreamsManyClicks(): void
+    {
+        $user = $this->createUser('user@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $link = $this->createLink($user, $domain, 'viele');
+
+        $at = new \DateTimeImmutable('-1 hour');
+        for ($i = 0; $i < 250; ++$i) {
+            $this->em()->persist(new Click($link, $at->modify(\sprintf('+%d seconds', $i)), 'export-hash-'.$i));
+        }
+        $this->em()->flush();
+        $this->em()->clear();
+
+        $this->client->loginUser($user);
+        $this->client->request('GET', '/links/'.$link->getId().'/export.csv?days=365');
+        self::assertResponseIsSuccessful();
+
+        ob_start();
+        $this->client->getResponse()->sendContent();
+        $csv = (string) ob_get_clean();
+        if ('' === $csv) {
+            // The test client already consumed the streamed response; use its buffer.
+            $csv = (string) $this->client->getInternalResponse()->getContent();
+        }
+
+        self::assertSame(251, substr_count(trim($csv), "\n") + 1, 'header plus 250 rows');
     }
 }

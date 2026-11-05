@@ -21,15 +21,19 @@ class LinkRepository extends ServiceEntityRepository
         parent::__construct($registry, Link::class);
     }
 
-    /** Hot path of every redirect: one indexed lookup, localisations fetched along. */
-    public function findForRedirect(Domain $domain, string $code): ?Link
+    /**
+     * Hot path of every redirect: one query that fetches the link together with its
+     * domain and localisations, so the controller needs no separate domain lookup.
+     */
+    public function findForRedirectByHost(string $host, string $code): ?Link
     {
         return $this->createQueryBuilder('l')
-            ->addSelect('loc')
+            ->addSelect('d', 'loc')
+            ->innerJoin('l.domain', 'd')
             ->leftJoin('l.localisations', 'loc')
-            ->where('l.domain = :domain')
+            ->where('d.hostname = :host')
             ->andWhere('l.code = :code')
-            ->setParameter('domain', $domain)
+            ->setParameter('host', Domain::normalizeHostname($host))
             ->setParameter('code', mb_strtolower($code))
             ->getQuery()
             ->getOneOrNullResult();
@@ -108,20 +112,6 @@ class LinkRepository extends ServiceEntityRepository
             ->where('l.owner = :from')
             ->setParameter('to', $to)
             ->setParameter('from', $from)
-            ->getQuery()
-            ->execute();
-    }
-
-    /** Called by the click recorder within the click transaction. */
-    public function incrementClicks(Link $link, \DateTimeImmutable $at): void
-    {
-        $this->createQueryBuilder('l')
-            ->update()
-            ->set('l.clickCount', 'l.clickCount + 1')
-            ->set('l.lastClickAt', ':at')
-            ->where('l.id = :id')
-            ->setParameter('at', $at, 'datetime_immutable')
-            ->setParameter('id', $link->getId())
             ->getQuery()
             ->execute();
     }

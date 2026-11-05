@@ -37,7 +37,10 @@ final class Settings implements ResetInterface
         self::TRACK_COUNTRY => '1',
     ];
 
-    private const string CACHE_KEY = 'app_settings';
+    private const string CACHE_KEY = 'app_settings_v2';
+    private const string LOGO_CACHE_KEY = 'app_settings_logo';
+    /** Presence flag inside the bulk cache; the (large) data URI has its own key. */
+    private const string LOGO_PRESENT_KEY = '_branding.logo_present';
 
     /** @var array<string, ?string>|null */
     private ?array $values = null;
@@ -50,6 +53,12 @@ final class Settings implements ResetInterface
 
     public function get(string $key): ?string
     {
+        if (self::LOGO === $key) {
+            // Loaded on demand only: the data URI can be hundreds of kilobytes and must not
+            // travel with every settings lookup on the redirect hot path.
+            return $this->getLogo();
+        }
+
         $this->values ??= $this->cache->get(self::CACHE_KEY, fn (): array => $this->load());
 
         return \array_key_exists($key, $this->values) ? $this->values[$key] : (self::DEFAULTS[$key] ?? null);
@@ -80,6 +89,22 @@ final class Settings implements ResetInterface
         }
     }
 
+    /** Whether a custom logo is configured (cheap: reads the presence flag from the bulk cache). */
+    public function hasLogo(): bool
+    {
+        $this->values ??= $this->cache->get(self::CACHE_KEY, fn (): array => $this->load());
+
+        return '1' === ($this->values[self::LOGO_PRESENT_KEY] ?? null);
+    }
+
+    /** The logo data URI. Only call this where the image is actually rendered. */
+    public function getLogo(): ?string
+    {
+        $logo = $this->cache->get(self::LOGO_CACHE_KEY, fn (): ?string => $this->em->getRepository(Setting::class)->find(self::LOGO)?->getValue());
+
+        return \is_string($logo) ? $logo : null;
+    }
+
     /** @param array<string, string|int|bool|null> $values */
     public function save(array $values): void
     {
@@ -98,6 +123,7 @@ final class Settings implements ResetInterface
         }
         $this->em->flush();
         $this->cache->delete(self::CACHE_KEY);
+        $this->cache->delete(self::LOGO_CACHE_KEY);
         $this->values = null;
     }
 
@@ -110,9 +136,16 @@ final class Settings implements ResetInterface
     private function load(): array
     {
         $values = [];
+        $hasLogo = false;
         foreach ($this->em->getRepository(Setting::class)->findAll() as $setting) {
+            if (self::LOGO === $setting->getKey()) {
+                // Keep the bulk cache small: only remember that a logo exists.
+                $hasLogo = null !== $setting->getValue() && '' !== $setting->getValue();
+                continue;
+            }
             $values[$setting->getKey()] = $setting->getValue();
         }
+        $values[self::LOGO_PRESENT_KEY] = $hasLogo ? '1' : null;
 
         return $values;
     }

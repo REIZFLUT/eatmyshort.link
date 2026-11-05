@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\AdminIpRule;
+use App\Entity\Click;
+use App\Entity\Domain;
+use App\Entity\Link;
+use App\Entity\User;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -95,6 +99,36 @@ final class InfrastructureTest extends KernelTestCase
         $tester->execute(['--days' => 30]);
         $tester->assertCommandIsSuccessful();
         self::assertStringContainsString('0 clicks', $tester->getDisplay());
+    }
+
+    public function testPruneCommandDeletesOldClicksAndKeepsRecentOnes(): void
+    {
+        $tester = $this->command('app:clicks:prune');
+        $em = static::getContainer()->get('doctrine')->getManager();
+
+        $user = (new User())->setEmail('prune@example.com')->setDisplayName('Prune');
+        $domain = new Domain('go.example.com');
+        $link = (new Link($user))->setDomain($domain)->setCode('prune')->setTargetUrl('https://www.example.com/');
+        $em->persist($user);
+        $em->persist($domain);
+        $em->persist($link);
+
+        $old = new \DateTimeImmutable('-40 days');
+        for ($i = 0; $i < 12; ++$i) {
+            $em->persist(new Click($link, $old->modify(\sprintf('+%d minutes', $i)), 'old-'.$i));
+        }
+        $recent = new \DateTimeImmutable('-1 day');
+        for ($i = 0; $i < 3; ++$i) {
+            $em->persist(new Click($link, $recent->modify(\sprintf('+%d minutes', $i)), 'new-'.$i));
+        }
+        $em->flush();
+
+        $tester->execute(['--days' => 30]);
+        $tester->assertCommandIsSuccessful();
+        self::assertStringContainsString('12 clicks', $tester->getDisplay());
+
+        $em->clear();
+        self::assertSame(3, $em->getRepository(Click::class)->count([]), 'only the 3 recent clicks survive');
     }
 
     private function command(string $name): CommandTester

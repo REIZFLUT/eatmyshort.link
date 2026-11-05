@@ -1,0 +1,16 @@
+framework:
+    rate_limiter:
+        # Tracking only: a visitor who opens more than 600 links per minute from one
+        # address is a script, and its clicks are not recorded. The redirect itself is
+        # always served, whatever the limiter says.
+        redirect:
+            policy: sliding_window
+            limit: 600
+            interval: '1 minute'
+
+when@test:
+    framework:
+        rate_limiter:
+            redirect:
+                # Keeps the rate-limit test short; production uses the limit above.
+                limit: 5
