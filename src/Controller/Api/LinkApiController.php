@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Link\LinkManager;
 use App\Repository\DomainRepository;
 use App\Repository\LinkRepository;
+use App\Security\AdminAccess;
 use App\Security\Voter\DomainVoter;
 use App\Security\Voter\LinkVoter;
 use App\Stats\Period;
@@ -44,6 +45,7 @@ final class LinkApiController extends AbstractController
         private readonly DomainRepository $domains,
         #[Autowire(service: 'limiter.api')]
         private readonly RateLimiterFactoryInterface $apiLimiter,
+        private readonly AdminAccess $adminAccess,
     ) {
     }
 
@@ -56,7 +58,7 @@ final class LinkApiController extends AbstractController
             'id' => $d->getId(),
             'hostname' => $d->getHostname(),
             'default' => $d->isDefault(),
-        ], $this->domains->findUsableBy($user))]);
+        ], $this->domains->findUsableBy($user, $this->adminAccess->isAdmin($user)))]);
     }
 
     #[Route('/links', name: 'api_links', methods: ['GET'])]
@@ -65,7 +67,7 @@ final class LinkApiController extends AbstractController
         $this->throttle($user);
         $page = max(1, $request->query->getInt('page', 1));
         $domainId = $request->query->getInt('domain');
-        $query = $links->searchQuery($user, $request->query->getString('q'), $domainId > 0 ? $this->domains->find($domainId) : null)
+        $query = $links->searchQuery($user, $request->query->getString('q'), $domainId > 0 ? $this->domains->find($domainId) : null, !$this->adminAccess->isAdmin($user))
             ->setFirstResult(($page - 1) * self::PER_PAGE)
             ->setMaxResults(self::PER_PAGE);
         $paginator = new Paginator($query, fetchJoinCollection: false);
@@ -84,7 +86,7 @@ final class LinkApiController extends AbstractController
         $link = new Link($user);
         $this->manager->applyDefaults($link);
 
-        $usable = $this->domains->findUsableBy($user);
+        $usable = $this->domains->findUsableBy($user, $this->adminAccess->isAdmin($user));
         $link->setDomain($usable[0] ?? null);
         $error = $this->apply($link, $data);
         if (null !== $error) {

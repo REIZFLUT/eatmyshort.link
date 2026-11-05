@@ -12,6 +12,7 @@ use App\Qr\QrCodeRenderer;
 use App\Repository\ClickRepository;
 use App\Repository\DomainRepository;
 use App\Repository\LinkRepository;
+use App\Security\AdminAccess;
 use App\Security\Voter\LinkVoter;
 use App\Stats\Period;
 use App\Stats\StatsBuilder;
@@ -35,6 +36,7 @@ final class LinkController extends AbstractController
     public function __construct(
         private readonly LinkManager $manager,
         private readonly DomainRepository $domains,
+        private readonly AdminAccess $adminAccess,
     ) {
     }
 
@@ -44,7 +46,8 @@ final class LinkController extends AbstractController
         $search = trim((string) $request->query->get('q'));
         $domainId = $request->query->getInt('domain');
         $domain = $domainId > 0 ? $this->domains->find($domainId) : null;
-        $onlyOwn = $user->isAdmin() && $request->query->getBoolean('mine');
+        $isAdmin = $this->adminAccess->isAdmin($user);
+        $onlyOwn = !$isAdmin || $request->query->getBoolean('mine');
         $page = max(1, $request->query->getInt('page', 1));
 
         $query = $links->searchQuery($user, $search, $domain, $onlyOwn)
@@ -60,14 +63,14 @@ final class LinkController extends AbstractController
             'search' => $search,
             'domain' => $domain,
             'only_own' => $onlyOwn,
-            'domains' => $user->isAdmin() ? $this->domains->findAllOrdered() : $this->domains->findUsableBy($user),
+            'domains' => $isAdmin ? $this->domains->findAllOrdered() : $this->domains->findUsableBy($user, false),
         ]);
     }
 
     #[Route('/new', name: 'app_link_new', methods: ['GET', 'POST'])]
     public function new(Request $request, #[CurrentUser] User $user): Response
     {
-        $usable = $this->domains->findUsableBy($user);
+        $usable = $this->domains->findUsableBy($user, $this->adminAccess->isAdmin($user));
         if ([] === $usable) {
             $this->addFlash('warning', 'flash.no_domains');
 
@@ -101,7 +104,7 @@ final class LinkController extends AbstractController
     #[IsGranted(LinkVoter::MANAGE, 'link')]
     public function edit(Request $request, Link $link, #[CurrentUser] User $user): Response
     {
-        $usable = $this->domains->findUsableBy($user);
+        $usable = $this->domains->findUsableBy($user, $this->adminAccess->isAdmin($user));
         if (null !== $link->getDomain() && !\in_array($link->getDomain(), $usable, true)) {
             // Keep the current domain selectable even if the assignment was revoked later.
             $usable[] = $link->getDomain();

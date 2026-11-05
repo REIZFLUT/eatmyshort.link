@@ -44,6 +44,27 @@ final class SecurityTest extends AppTestCase
         self::assertSelectorTextContains('.errors', 'gesperrt');
     }
 
+    public function testLockingOrDemotingEndsRunningSessions(): void
+    {
+        $user = $this->createUser('ada@example.com', admin: true);
+        $this->login('ada@example.com', self::PASSWORD);
+        $this->client->request('GET', '/admin/users');
+        self::assertResponseIsSuccessful();
+
+        $this->fresh($user)->setAdmin(false);
+        $this->em()->flush();
+        $this->client->request('GET', '/links');
+        self::assertResponseRedirects('http://'.self::ADMIN_HOST.'/login', message: 'role change logs out');
+
+        $this->login('ada@example.com', self::PASSWORD);
+        $this->client->request('GET', '/links');
+        self::assertResponseIsSuccessful();
+        $this->fresh($user)->setActive(false);
+        $this->em()->flush();
+        $this->client->request('GET', '/links');
+        self::assertResponseRedirects('http://'.self::ADMIN_HOST.'/login', message: 'locked users lose their session');
+    }
+
     public function testTotpIsRequiredAfterPasswordLogin(): void
     {
         $user = $this->createUser('ada@example.com');

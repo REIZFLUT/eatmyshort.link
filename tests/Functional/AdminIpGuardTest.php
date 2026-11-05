@@ -34,6 +34,30 @@ final class AdminIpGuardTest extends AppTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testAdminOutsideAllowlistActsLikeNormalUser(): void
+    {
+        $admin = $this->createUser('root@example.com', admin: true);
+        $bob = $this->createUser('bob@example.com');
+        $domain = $this->createDomain('go.example.com', $bob);
+        $bobsLink = $this->createLink($bob, $domain, 'bob');
+        $this->createLink($admin, $domain, 'root');
+        $this->em()->persist(new AdminIpRule('10.0.0.0/8'));
+        $this->em()->flush();
+        $this->client->loginUser($admin);
+
+        $this->client->request('GET', '/links');
+        self::assertSelectorTextContains('table', 'go.example.com/root');
+        self::assertSelectorTextNotContains('table', 'go.example.com/bob');
+        self::assertSelectorNotExists('a[href="/admin/users"]', 'no admin navigation from outside');
+        $this->client->request('GET', '/links/'.$bobsLink->getId());
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->request('GET', '/links', server: ['REMOTE_ADDR' => '10.9.8.7']);
+        self::assertSelectorTextContains('table', 'go.example.com/bob');
+        $this->client->request('GET', '/links/'.$bobsLink->getId(), server: ['REMOTE_ADDR' => '10.9.8.7']);
+        self::assertResponseIsSuccessful();
+    }
+
     public function testBlockedEvenBeforeLogin(): void
     {
         $this->em()->persist(new AdminIpRule('10.0.0.0/8'));

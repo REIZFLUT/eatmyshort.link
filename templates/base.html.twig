@@ -26,7 +26,7 @@
             <nav class="nav" aria-label="{{ 'nav.main'|trans }}">
                 <a href="{{ path('app_dashboard') }}" class="{{ route == 'app_dashboard' ? 'active' }}">{{ 'nav.dashboard'|trans }}</a>
                 <a href="{{ path('app_links') }}" class="{{ route starts with 'app_link' ? 'active' }}">{{ 'nav.links'|trans }}</a>
-                {% if is_granted('ROLE_ADMIN') %}
+                {% if is_admin() %}
                     <span class="sep" aria-hidden="true"></span>
                     <a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ 'nav.users'|trans }}</a>
                     <a href="{{ path('app_admin_domains') }}" class="{{ route starts with 'app_admin_domain' ? 'active' }}">{{ 'nav.domains'|trans }}</a>

@@ -6,6 +6,7 @@ namespace App\Security\Voter;
 
 use App\Entity\Domain;
 use App\Entity\User;
+use App\Security\AdminAccess;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
@@ -19,6 +20,10 @@ final class DomainVoter extends Voter
 {
     public const string USE = 'DOMAIN_USE';
 
+    public function __construct(private readonly AdminAccess $adminAccess)
+    {
+    }
+
     protected function supports(string $attribute, mixed $subject): bool
     {
         return self::USE === $attribute && $subject instanceof Domain;
@@ -30,7 +35,7 @@ final class DomainVoter extends Voter
         if (!$user instanceof User || !$subject->isActive()) {
             return false;
         }
-        if ($user->isAdmin()) {
+        if ($this->adminAccess->isAdmin($user)) {
             return true;
         }
 

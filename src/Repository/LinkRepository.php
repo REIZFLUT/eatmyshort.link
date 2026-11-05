@@ -49,9 +49,9 @@ class LinkRepository extends ServiceEntityRepository
     }
 
     /**
-     * Links visible to the user (own links; admins see all), optionally filtered.
+     * Links of the user, or all links for admins ($onlyOwn = false), optionally filtered.
      */
-    public function searchQuery(User $user, ?string $search = null, ?Domain $domain = null, bool $onlyOwn = false): QueryBuilder
+    public function searchQuery(User $user, ?string $search = null, ?Domain $domain = null, bool $onlyOwn = true): QueryBuilder
     {
         $qb = $this->createQueryBuilder('l')
             ->addSelect('d', 'o')
@@ -60,7 +60,7 @@ class LinkRepository extends ServiceEntityRepository
             ->orderBy('l.createdAt', \SortDirection::Descending)
             ->addOrderBy('l.id', \SortDirection::Descending);
 
-        if ($onlyOwn || !$user->isAdmin()) {
+        if ($onlyOwn) {
             $qb->andWhere('l.owner = :owner')->setParameter('owner', $user);
         }
         if (null !== $domain) {
@@ -77,7 +77,7 @@ class LinkRepository extends ServiceEntityRepository
     /** @return list<Link> */
     public function findRecentFor(User $user, int $limit = 5): array
     {
-        return $this->searchQuery($user, onlyOwn: true)->setMaxResults($limit)->getQuery()->getResult();
+        return $this->searchQuery($user)->setMaxResults($limit)->getQuery()->getResult();
     }
 
     public function countFor(?User $owner = null): int

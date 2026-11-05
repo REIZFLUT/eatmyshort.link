@@ -14,6 +14,7 @@ use Scheb\TwoFactorBundle\Model\Totp\TotpConfiguration;
 use Scheb\TwoFactorBundle\Model\Totp\TotpConfigurationInterface;
 use Scheb\TwoFactorBundle\Model\Totp\TwoFactorInterface;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Security\Core\User\EquatableInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -21,7 +22,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'app_user')]
 #[UniqueEntity(fields: ['email'], message: 'user.email.taken')]
-class User implements UserInterface, PasswordAuthenticatedUserInterface, TwoFactorInterface, BackupCodeInterface
+class User implements UserInterface, EquatableInterface, PasswordAuthenticatedUserInterface, TwoFactorInterface, BackupCodeInterface
 {
     public const string ROLE_USER = 'ROLE_USER';
     public const string ROLE_ADMIN = 'ROLE_ADMIN';
@@ -321,6 +322,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, TwoFact
         $this->lastLoginAt = $lastLoginAt;
 
         return $this;
+    }
+
+    /**
+     * Compared on every request against the freshly loaded user: locking an account,
+     * changing its password or its roles ends existing sessions immediately.
+     */
+    public function isEqualTo(UserInterface $user): bool
+    {
+        if (!$user instanceof self || $user->getId() !== $this->id || $user->getEmail() !== $this->email) {
+            return false;
+        }
+        // The session copy keeps only a crc32c of the hash (see __serialize()).
+        $password = $user->getPassword();
+        $samePassword = $password === $this->password || (null !== $password && hash('crc32c', $password) === $this->password);
+        $roles = $this->getRoles();
+        $otherRoles = $user->getRoles();
+        sort($roles);
+        sort($otherRoles);
+
+        return $samePassword && $roles === $otherRoles && $this->active && $user->isActive();
     }
 
     public function __serialize(): array

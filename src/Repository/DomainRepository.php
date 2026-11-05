@@ -36,14 +36,14 @@ class DomainRepository extends ServiceEntityRepository
      *
      * @return list<Domain>
      */
-    public function findUsableBy(User $user): array
+    public function findUsableBy(User $user, bool $asAdmin): array
     {
         $qb = $this->createQueryBuilder('d')
             ->where('d.active = true')
             ->orderBy('d.isDefault', \SortDirection::Descending)
             ->addOrderBy('d.hostname', \SortDirection::Ascending);
 
-        if (!$user->isAdmin()) {
+        if (!$asAdmin) {
             $qb->innerJoin('d.users', 'u')->andWhere('u = :user')->setParameter('user', $user);
         }
 

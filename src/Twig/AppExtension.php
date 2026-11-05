@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Twig;
 
 use App\Domain\HostRegistry;
+use App\Entity\User;
 use App\EventListener\SecurityHeadersListener;
+use App\Security\AdminAccess;
 use App\Settings\Settings;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Intl\Countries;
 use Symfony\Component\Intl\Exception\MissingResourceException;
@@ -20,7 +23,18 @@ final readonly class AppExtension
         private RequestStack $requestStack,
         private Settings $settings,
         private HostRegistry $hosts,
+        private AdminAccess $adminAccess,
+        private Security $security,
     ) {
+    }
+
+    /** Admin rights that are actually usable from the current address. */
+    #[AsTwigFunction('is_admin')]
+    public function isAdmin(): bool
+    {
+        $user = $this->security->getUser();
+
+        return $user instanceof User && $this->adminAccess->isAdmin($user);
     }
 
     #[AsTwigFunction('csp_nonce')]

@@ -10,6 +10,7 @@ use App\Form\LinkType;
 use App\Link\LinkManager;
 use App\Repository\DomainRepository;
 use App\Repository\LinkRepository;
+use App\Security\AdminAccess;
 use App\Stats\Period;
 use App\Stats\StatsBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,8 +27,9 @@ final class DashboardController extends AbstractController
         LinkRepository $links,
         LinkManager $manager,
         StatsBuilder $stats,
+        AdminAccess $adminAccess,
     ): Response {
-        $usable = $domains->findUsableBy($user);
+        $usable = $domains->findUsableBy($user, $adminAccess->isAdmin($user));
         $link = new Link($user);
         $link->setDomain($usable[0] ?? null);
         $manager->applyDefaults($link);

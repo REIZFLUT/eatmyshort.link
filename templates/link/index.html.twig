@@ -21,14 +21,14 @@
                 {% endfor %}
             </select>
         {% endif %}
-        {% if is_granted('ROLE_ADMIN') %}
+        {% if is_admin() %}
             <label class="check" for="mine"><input type="checkbox" id="mine" name="mine" value="1" data-autosubmit {{ only_own ? 'checked' }}> {{ 'links.only_mine'|trans }}</label>
         {% endif %}
         <button type="submit" class="btn">{{ 'action.search'|trans }}</button>
     </form>
 
     <div class="card flush">
-        {{ include('link/_table.html.twig', {links: links, show_owner: is_granted('ROLE_ADMIN') and not only_own}) }}
+        {{ include('link/_table.html.twig', {links: links, show_owner: is_admin() and not only_own}) }}
     </div>
     {{ include('_partials/pagination.html.twig') }}
 {% endblock %}
