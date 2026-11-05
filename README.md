@@ -1,73 +1,76 @@
 # EatMyShort.Link
 
-Selbst gehosteter Kurzlink-Dienst für Unternehmen – wie Bitly, nur auf dem eigenen Server.
-Gebaut auf einem schlanken Symfony-8-Kern mit SQLite, ohne Node-Build und ohne Hintergrunddienste.
+**English** · [Deutsch](README.de.md)
 
-## Funktionen
+Self-hosted short-link service for companies — like Bitly, but on your own server.
+Built on a lean Symfony 8 core with SQLite, no Node build step and no background workers.
 
-- **Beliebig viele (Sub)Domains** – `go.firma.de/messe`, `jobs.firma.de/azubi`; Kürzel sind pro Domain eindeutig,
-  Startseite und unbekannte Kürzel lassen sich je Domain weiterleiten (optional mit angehängtem Pfad).
-- **Sprachabhängige Ziele** – ein Kurzlink, je nach Browsersprache unterschiedliche Ziel-URLs.
-- **Tracking ohne Cookies** – Klicks pro Tag, eindeutige Besucher, Herkunft, Geräte, Browser, Betriebssysteme,
-  Sprachen, optional Länder (lokale GeoIP-Datenbank). Keine vollständigen IP-Adressen, Bots werden erkannt und
-  nicht gezählt. Erfasst wird erst nach dem Absenden der Weiterleitung – keine zusätzliche Wartezeit.
-- **Mehrere Nutzer** – jeder verwaltet seine Links, Admins sehen alles; Admins geben Domains pro Nutzer frei.
-  Einladung per E-Mail-Link, Passwort vergessen, Login-Drosselung.
-- **Admin-Bereich auf IP-Adressen/Netze einschränkbar** (IPv4/IPv6, CIDR) mit Aussperr-Schutz.
-- **Passkeys (WebAuthn)** für passwortlose, phishing-sichere Anmeldung; **TOTP** mit Backup-Codes für Passwort-Logins;
-  2FA-Pflicht für Admins einschaltbar.
-- QR-Codes (SVG/PNG), CSV-Export, Ablaufdatum, Aktiv-Schalter, 301/302/307/308.
-- **REST-API** mit persönlichen Tokens ([docs/API.md](docs/API.md)).
-- Oberfläche auf Deutsch und Englisch, hell/dunkel, mobil nutzbar, eigenes Logo und Akzentfarbe
-  (Standard: Simpsons-Gelb `#fed90f`; Schrift- und Textfarben werden für Kontrast nach WCAG berechnet,
-  das Favicon übernimmt die Farbe).
+## Features
+
+- **Any number of (sub)domains** – `go.company.com/trade-show`, `jobs.company.com/apprentice`; short codes are
+  unique per domain, and the root page and unknown codes can be redirected per domain (optionally with the path
+  appended).
+- **Language-aware targets** – one short link, different target URLs depending on the browser language.
+- **Tracking without cookies** – clicks per day, unique visitors, referrers, devices, browsers, operating systems,
+  languages, optionally countries (local GeoIP database). No full IP addresses; bots are detected and not counted.
+  Recording happens only after the redirect has been sent — no added latency.
+- **Multiple users** – everyone manages their own links, admins see everything; admins grant domains per user.
+  Invitations by e-mail link, password reset, login throttling.
+- **Admin area can be restricted to IP addresses/networks** (IPv4/IPv6, CIDR) with lock-out protection.
+- **Passkeys (WebAuthn)** for passwordless, phishing-resistant sign-in; **TOTP** with backup codes for password
+  logins; mandatory 2FA for admins can be switched on.
+- QR codes (SVG/PNG), CSV export, expiry date, active toggle, 301/302/307/308.
+- **REST API** with personal tokens ([docs/API.md](docs/API.md)).
+- Interface in German and English, light/dark, usable on mobile, custom logo and accent colour
+  (default: Simpsons yellow `#fed90f`; text and font colours are calculated for WCAG contrast,
+  the favicon picks up the colour).
 
 ## Installation
 
-Siehe **[docs/INSTALL.md](docs/INSTALL.md)** (PHP 8.4, nginx oder Apache, SQLite).
+See **[docs/INSTALL.md](docs/INSTALL.md)** (PHP 8.4, nginx or Apache, SQLite).
 
-Kurzfassung:
+In short:
 
 ```bash
 composer install --no-dev -a
-cp docs/examples/env.local.dist .env.local   # anpassen
+cp docs/examples/env.local.dist .env.local   # adjust the values
 php bin/console doctrine:migrations:migrate -n
 php bin/console asset-map:compile
-php bin/console app:user:create admin@firma.de "Admin" --admin
-php bin/console app:domain:add go.firma.de --default
+php bin/console app:user:create admin@company.com "Admin" --admin
+php bin/console app:domain:add go.company.com --default
 ```
 
-## Konsolenbefehle
+## Console commands
 
-| Befehl | Zweck |
+| Command | Purpose |
 |---|---|
-| `app:user:create <email> [name] [--admin] [--invite]` | Nutzer anlegen (Passwort abfragen oder Einladungslink) |
-| `app:domain:add <host> [--root=URL] [--default]` | Kurzdomain anlegen |
-| `app:admin-ip [list\|allow\|remove\|clear] [cidr] [label]` | IP-Sperre für `/admin` verwalten (Notfallzugang) |
-| `app:clicks:prune [--days=N]` | alte Klicks löschen (Cron) |
-| `app:db:backup [ziel]` | konsistente Kopie der SQLite-Datenbank |
+| `app:user:create <email> [name] [--admin] [--invite]` | Create a user (prompts for a password or issues an invitation link) |
+| `app:domain:add <host> [--root=URL] [--default]` | Add a short-link domain |
+| `app:admin-ip [list\|allow\|remove\|clear] [cidr] [label]` | Manage the IP restriction for `/admin` (emergency access) |
+| `app:clicks:prune [--days=N]` | Delete old clicks (cron) |
+| `app:db:backup [target]` | Consistent copy of the SQLite database |
 
-## Entwicklung
+## Development
 
 ```bash
 composer install
 php bin/console doctrine:migrations:migrate -n
-vendor/bin/phpunit                 # Tests (eigene SQLite-Testdatenbank)
-vendor/bin/phpstan analyse         # Level 8
+vendor/bin/phpunit                 # tests (separate SQLite test database)
+vendor/bin/phpstan analyse         # level 8
 vendor/bin/php-cs-fixer fix --dry-run
 ```
 
-Aufbau in Kürze:
+Architecture in brief:
 
-- `src/EventListener/ShortLinkHostListener.php` – jeder Host außer `APP_ADMIN_HOSTS` geht direkt an den
-  `RedirectController`; App-Routen existieren dort nicht.
-- `src/Tracking/ClickRecorder.php` – schreibt Klicks in `kernel.terminate`, nach dem Senden der Antwort.
-- `src/Security/` – IP-Sperre, API-Tokens, Voter, verschlüsselte TOTP-Schlüssel, Passkey-Anbindung.
-- `src/Doctrine/SqlitePragmaMiddleware.php` – WAL, Busy-Timeout, Foreign Keys.
+- `src/EventListener/ShortLinkHostListener.php` – every host except `APP_ADMIN_HOSTS` goes straight to the
+  `RedirectController`; app routes do not exist there.
+- `src/Tracking/ClickRecorder.php` – writes clicks in `kernel.terminate`, after the response has been sent.
+- `src/Security/` – IP restriction, API tokens, voters, encrypted TOTP secrets, passkey integration.
+- `src/Doctrine/SqlitePragmaMiddleware.php` – WAL, busy timeout, foreign keys.
 
-Die frühere Version auf dem Continy-Framework liegt unter dem Tag `continy-final`;
-was daraus übernommen wurde, steht in [docs/legacy-inventory.md](docs/legacy-inventory.md).
+The previous version on the Continy framework lives under the tag `continy-final`;
+what was carried over from it is documented in [docs/legacy-inventory.md](docs/legacy-inventory.md).
 
-## Lizenz
+## License
 
-GPL-3.0, siehe [LICENSE](LICENSE).
+GPL-3.0, see [LICENSE](LICENSE).
