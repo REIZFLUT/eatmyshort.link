@@ -339,6 +339,7 @@ flash.no_domains: No domain has been assigned to you yet. An admin needs to assi
 flash.passkey_deleted: Passkey deleted.
 flash.passkey_last: This is your last way to sign in. Set a password or add another passkey first.
 flash.password_changed: Password changed.
+flash.password_login_passkey_only: This account has a passkey. Please sign in with your passkey – or set up a two-factor code first.
 flash.profile_saved: Profile saved.
 flash.settings_saved: Settings saved.
 flash.token_deleted: Token revoked.

@@ -8,7 +8,7 @@
         <p class="muted">{{ 'totp.login_text'|trans }}</p>
 
         {% if authenticationError %}
-            <ul class="errors form-errors"><li>{{ authenticationError|trans(authenticationErrorData, 'SchebTwoFactorBundle') }}</li></ul>
+            <ul class="errors form-errors"><li>{{ authenticationError|trans(authenticationErrorData, 'security') }}</li></ul>
         {% endif %}
 
         <form method="post" action="{{ checkPathUrl ? checkPathUrl : path(checkPathRoute) }}">
@@ -23,6 +23,11 @@
             {% endif %}
             <button type="submit" class="btn btn-primary btn-block">{{ 'totp.verify'|trans }}</button>
         </form>
-        <p class="small"><a href="{{ logoutPath }}">{{ 'action.cancel'|trans }}</a></p>
+        <div class="small">
+            <form method="post" action="{{ logoutPath }}" class="inline-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
+                <button type="submit" class="btn btn-ghost btn-sm">{{ 'action.cancel'|trans }}</button>
+            </form>
+        </div>
     </div>
 {% endblock %}

@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use App\Security\SecretBox;
 use OTPHP\TOTP;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final class SecurityTest extends AppTestCase
 {
@@ -80,6 +81,7 @@ final class SecurityTest extends AppTestCase
         $this->client->submitForm('Bestätigen', ['_auth_code' => '000000']);
         $this->client->followRedirect();
         self::assertSelectorExists('.errors');
+        self::assertSelectorTextContains('.errors', 'Bestätigungs-Code ist nicht korrekt', 'the 2FA error is translated');
 
         $code = TOTP::createFromSecret($secret)->now();
         $this->client->submitForm('Bestätigen', ['_auth_code' => $code]);
@@ -140,6 +142,88 @@ final class SecurityTest extends AppTestCase
 
         $this->login('neu@example.com', 'ein-langes-sicheres-passwort');
         self::assertResponseRedirects('http://'.self::ADMIN_HOST.'/');
+    }
+
+    public function testResetMailsAreLimitedPerAddress(): void
+    {
+        // Unique address per run: limiter state lives in a cache pool.
+        $email = 'limit-'.bin2hex(random_bytes(4)).'@example.com';
+        $user = $this->createUser($email);
+        $token = $this->resetCsrfToken('203.0.113.10');
+
+        // Four requests for one mailbox from four different addresses.
+        foreach (['203.0.113.10', '203.0.113.11', '203.0.113.12', '203.0.113.13'] as $ip) {
+            $this->client->request('POST', '/reset', ['email' => $email, '_token' => $token], server: ['REMOTE_ADDR' => $ip]);
+            self::assertResponseRedirects('/login', message: 'the answer never changes');
+        }
+
+        self::assertLessThanOrEqual(3, (int) $this->em()->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM reset_token WHERE user_id = ?',
+            [$user->getId()],
+        ), 'at most three reset mails per address and hour');
+    }
+
+    public function testPerMailboxLimiterAllowsThreeMailsPerHour(): void
+    {
+        // The limit cannot be observed over HTTP here: in the test environment the
+        // rate limiter pool is an ArrayAdapter that is reset between requests.
+        $limiter = static::getContainer()->get('limiter.password_reset_email');
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $limiter);
+
+        $key = 'limiter-'.bin2hex(random_bytes(4)).'@example.com';
+        foreach ([1, 2, 3] as $attempt) {
+            self::assertTrue($limiter->create($key)->consume()->isAccepted(), 'mail '.$attempt.' is allowed');
+        }
+        self::assertFalse($limiter->create($key)->consume()->isAccepted(), 'the fourth mail within an hour is refused');
+    }
+
+    public function testResetRequestDoesNotRevealUnknownAddresses(): void
+    {
+        $known = 'known-'.bin2hex(random_bytes(4)).'@example.com';
+        $this->createUser($known);
+        $unknown = 'ghost-'.bin2hex(random_bytes(4)).'@example.com';
+        $token = $this->resetCsrfToken('203.0.113.20');
+
+        $this->client->request('POST', '/reset', ['email' => $known, '_token' => $token], server: ['REMOTE_ADDR' => '203.0.113.20']);
+        $knownResponse = $this->client->getResponse();
+
+        $rowsBefore = (int) $this->em()->getConnection()->fetchOne('SELECT COUNT(*) FROM reset_token');
+        $this->client->request('POST', '/reset', ['email' => $unknown, '_token' => $token], server: ['REMOTE_ADDR' => '203.0.113.21']);
+        $unknownResponse = $this->client->getResponse();
+
+        self::assertSame($knownResponse->getStatusCode(), $unknownResponse->getStatusCode());
+        self::assertSame($knownResponse->headers->get('Location'), $unknownResponse->headers->get('Location'));
+        self::assertSame($rowsBefore, (int) $this->em()->getConnection()->fetchOne('SELECT COUNT(*) FROM reset_token'), 'no token for an unknown address');
+    }
+
+    public function testLogoutNeedsPostAndCsrfToken(): void
+    {
+        $this->client->loginUser($this->createUser('ada@example.com'));
+
+        $this->client->request('GET', '/logout');
+        self::assertResponseStatusCodeSame(405, 'logout is no longer a GET endpoint');
+        $this->client->request('GET', '/links');
+        self::assertResponseIsSuccessful('a GET on /logout does not log out');
+
+        $this->client->request('POST', '/logout');
+        $this->client->request('GET', '/links');
+        self::assertResponseIsSuccessful('a POST without a token does not log out');
+
+        $crawler = $this->client->request('GET', '/links');
+        $token = $crawler->filter('form[action="/logout"] input[name=_token]')->attr('value');
+        $this->client->request('POST', '/logout', ['_token' => $token], server: ['HTTP_ORIGIN' => 'http://'.self::ADMIN_HOST]);
+        self::assertResponseRedirects('/login');
+
+        $this->client->request('GET', '/links');
+        self::assertResponseRedirects('http://'.self::ADMIN_HOST.'/login', message: 'the session is gone');
+    }
+
+    private function resetCsrfToken(string $ip): string
+    {
+        $crawler = $this->client->request('GET', '/reset', server: ['REMOTE_ADDR' => $ip]);
+        self::assertResponseIsSuccessful();
+
+        return (string) $crawler->filter('form input[name=_token]')->attr('value');
     }
 
     private function login(string $email, string $password): void
