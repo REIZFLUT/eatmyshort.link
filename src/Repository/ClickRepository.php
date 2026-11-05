@@ -8,6 +8,7 @@ use App\Entity\Click;
 use App\Entity\Link;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -106,28 +107,58 @@ class ClickRepository extends ServiceEntityRepository
         return $links;
     }
 
-    /** @return iterable<Click> */
-    public function iterateForExport(Link $link, \DateTimeImmutable $from, \DateTimeImmutable $to): iterable
+    /**
+     * Streams clicks for the CSV export with a constant memory footprint: every hydrated
+     * entity is detached again after the consumer has written it, so neither the identity
+     * map nor the unit of work grow with the number of exported rows.
+     *
+     * @return \Generator<int, Click>
+     */
+    public function iterateForExport(Link $link, \DateTimeImmutable $from, \DateTimeImmutable $to): \Generator
     {
-        return $this->createQueryBuilder('c')
+        $em = $this->getEntityManager();
+        $query = $this->createQueryBuilder('c')
             ->where('c.link = :link')
             ->andWhere('c.clickedDay BETWEEN :from AND :to')
             ->setParameter('link', $link)
             ->setParameter('from', $from, Types::DATE_IMMUTABLE)
             ->setParameter('to', $to, Types::DATE_IMMUTABLE)
             ->orderBy('c.clickedAt', \SortDirection::Ascending)
-            ->getQuery()
-            ->toIterable();
+            ->getQuery();
+
+        foreach ($query->toIterable() as $click) {
+            try {
+                yield $click;
+            } finally {
+                $em->detach($click);
+            }
+        }
     }
 
-    public function deleteOlderThan(\DateTimeImmutable $day): int
+    /**
+     * Deletes old clicks in small chunks. One big DELETE would hold SQLite's write lock
+     * longer than the busy timeout (5 s) and block tracking for the whole duration.
+     */
+    public function deleteOlderThan(\DateTimeImmutable $day, int $chunkSize = 5000): int
     {
-        return $this->createQueryBuilder('c')
-            ->delete()
-            ->where('c.clickedDay < :day')
-            ->setParameter('day', $day, Types::DATE_IMMUTABLE)
-            ->getQuery()
-            ->execute();
+        $connection = $this->getEntityManager()->getConnection();
+        $deleted = 0;
+
+        while (true) {
+            $affected = $connection->executeStatement(
+                'DELETE FROM click WHERE rowid IN (SELECT rowid FROM click WHERE clicked_day < ? LIMIT ?)',
+                [$day->format('Y-m-d'), $chunkSize],
+                [ParameterType::STRING, ParameterType::INTEGER],
+            );
+            $deleted += $affected;
+            if ($affected < $chunkSize) {
+                break;
+            }
+            // Give the redirect writer a chance to get the lock between chunks.
+            usleep(10000);
+        }
+
+        return $deleted;
     }
 
     private function scoped(\DateTimeImmutable $from, \DateTimeImmutable $to, ?Link $link, ?User $owner): QueryBuilder

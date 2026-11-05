@@ -10,5 +10,6 @@ domain.hostname.taken: Diese Domain ist schon eingetragen.
 domain.hostname.invalid: Kein gültiger Hostname.
 domain.hostname.is_admin: Dieser Hostname dient der Verwaltung (APP_ADMIN_HOSTS) und kann keine Kurzlink-Domain sein.
 localisation.language.invalid: Sprachcode wie „en“ oder „de-at“ angeben.
+localisation.language.duplicate: Jede Sprache darf nur einmal angegeben werden.
 password.current_wrong: Das aktuelle Passwort stimmt nicht.
 password.mismatch: Die Passwörter stimmen nicht überein.

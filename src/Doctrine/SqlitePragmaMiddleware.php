@@ -41,6 +41,12 @@ final class SqlitePragmaMiddleware implements Middleware
 
                 if (!$inTransaction && \in_array($params['driver'] ?? null, ['pdo_sqlite', 'sqlite3'], true)) {
                     foreach (SqlitePragmaMiddleware::PRAGMAS as $pragma => $value) {
+                        // Switching the journal mode is the expensive one (it touches the file and
+                        // can force a checkpoint). Connections from a pool usually already run in
+                        // WAL, so ask first instead of paying for a no-op switch on every connect.
+                        if ('journal_mode' === $pragma && strtolower($value) === strtolower((string) $connection->query('PRAGMA journal_mode')->fetchOne())) {
+                            continue;
+                        }
                         $connection->exec(\sprintf('PRAGMA %s = %s', $pragma, $value));
                     }
                 }

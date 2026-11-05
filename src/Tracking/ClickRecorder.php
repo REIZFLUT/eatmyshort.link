@@ -7,19 +7,25 @@ namespace App\Tracking;
 use App\Entity\Click;
 use App\Entity\Link;
 use App\Link\AcceptLanguageMatcher;
-use App\Repository\LinkRepository;
 use App\Settings\Settings;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * Records clicks after the redirect has been sent: kernel.terminate runs after
  * fastcgi_finish_request() under PHP-FPM, so tracking adds no latency and needs
  * no queue worker.
+ *
+ * Clicks are written through DBAL instead of the ORM: a click is an append-only row
+ * and the counter update is a single UPDATE, so the identity map and unit of work
+ * would only add overhead on the hot path.
  */
 #[AsEventListener(event: KernelEvents::TERMINATE)]
 final class ClickRecorder
@@ -28,11 +34,12 @@ final class ClickRecorder
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly LinkRepository $links,
         private readonly Settings $settings,
         private readonly VisitorHasher $visitorHasher,
         private readonly UserAgentInspector $userAgents,
         private readonly GeoIpLookup $geoIp,
+        #[Autowire(service: 'limiter.redirect')]
+        private readonly RateLimiterFactoryInterface $limiter,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -42,6 +49,20 @@ final class ClickRecorder
         if (!$this->settings->getBool(Settings::TRACKING) || !$request->isMethod('GET') || self::isPrefetch($request)) {
             return;
         }
+
+        // Rate-limit tracking per client so a script cannot grow the click table without bound.
+        // Tracking must never break the redirect, so a limiter failure fails open.
+        try {
+            $client = $request->getClientIp() ?? 'unknown';
+            if (!$this->limiter->create($client)->consume()->isAccepted()) {
+                $this->logger->debug('Click tracking rate limit exceeded for {client}.', ['client' => $client]);
+
+                return;
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Click tracking rate limiter failed: {message}', ['message' => $e->getMessage()]);
+        }
+
         $request->attributes->set(self::ATTRIBUTE, $link->getId());
     }
 
@@ -73,28 +94,68 @@ final class ClickRecorder
             $request->headers->all(),
         ));
 
+        if ($agent['bot']) {
+            // Crawlers, link checkers and empty user agents are not visitors. Keeping them
+            // out of the table keeps the statistics honest and the database small.
+            return null;
+        }
+
         $click = new Click($link, $at, $this->visitorHasher->hash($ip, $userAgent, $at))
             ->setIpPrefix(IpAnonymizer::anonymize($ip))
             ->setReferrerHost(self::referrerHost($request))
             ->setDeviceType($agent['device'])
             ->setBrowser($agent['browser'])
             ->setOs($agent['os'])
-            ->setLanguage(AcceptLanguageMatcher::primaryLanguage($request->headers->get('Accept-Language')))
-            ->setBot($agent['bot']);
+            ->setLanguage(AcceptLanguageMatcher::primaryLanguage($request->headers->get('Accept-Language')));
 
-        if (!$agent['bot'] && $this->settings->getBool(Settings::TRACK_COUNTRY)) {
+        if ($this->settings->getBool(Settings::TRACK_COUNTRY)) {
             $click->setCountryCode($this->geoIp->country($ip));
         }
 
-        $this->em->wrapInTransaction(function () use ($click, $link, $at): void {
-            $this->em->persist($click);
-            $this->em->flush();
-            if (!$click->isBot()) {
-                $this->links->incrementClicks($link, $at);
-            }
-        });
+        $this->insert($click, $linkId);
 
         return $click;
+    }
+
+    private function insert(Click $click, int $linkId): void
+    {
+        $connection = $this->em->getConnection();
+        $connection->beginTransaction();
+
+        try {
+            $connection->executeStatement(
+                'INSERT INTO click (clicked_at, clicked_day, visitor_hash, ip_prefix, country_code, referrer_host, device_type, browser, os, language, bot, link_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $click->getClickedAt()->format('Y-m-d H:i:s'),
+                    $click->getClickedDay()->format('Y-m-d'),
+                    $click->getVisitorHash(),
+                    $click->getIpPrefix(),
+                    $click->getCountryCode(),
+                    $click->getReferrerHost(),
+                    $click->getDeviceType(),
+                    $click->getBrowser(),
+                    $click->getOs(),
+                    $click->getLanguage(),
+                    $click->isBot(),
+                    $linkId,
+                ],
+                [
+                    ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING,
+                    ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING,
+                    ParameterType::STRING, ParameterType::STRING, ParameterType::BOOLEAN, ParameterType::INTEGER,
+                ],
+            );
+            $connection->executeStatement(
+                'UPDATE link SET click_count = click_count + 1, last_click_at = ? WHERE id = ?',
+                [$click->getClickedAt()->format('Y-m-d H:i:s'), $linkId],
+                [ParameterType::STRING, ParameterType::INTEGER],
+            );
+            $connection->commit();
+        } catch (\Throwable $e) {
+            $connection->rollBack();
+
+            throw $e;
+        }
     }
 
     private static function referrerHost(Request $request): ?string

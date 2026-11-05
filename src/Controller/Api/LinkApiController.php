@@ -220,13 +220,25 @@ final class LinkApiController extends AbstractController
         }
         if (\array_key_exists('localisations', $data)) {
             if (!\is_array($data['localisations'])) {
-                return $this->error('localisations', 'Expected an object like {"en": "https://…"}.');
+                return $this->error('localisations', 'Expected an object like {"en": "https://…"} or a list of {"language": "en", "target_url": "https://…"}.');
             }
             foreach ($link->getLocalisations()->toArray() as $existing) {
                 $link->removeLocalisation($existing);
             }
-            foreach ($data['localisations'] as $language => $url) {
-                $link->addLocalisation(new LinkLocalisation()->setLanguage((string) $language)->setTargetUrl(\is_string($url) ? $url : ''));
+            if (array_is_list($data['localisations'])) {
+                foreach ($data['localisations'] as $entry) {
+                    if (!\is_array($entry)) {
+                        return $this->error('localisations', 'Each localisation must be an object with "language" and "target_url".');
+                    }
+                    $target = $entry['target_url'] ?? $entry['targetUrl'] ?? '';
+                    $link->addLocalisation(new LinkLocalisation()
+                        ->setLanguage(\is_string($entry['language'] ?? null) ? $entry['language'] : '')
+                        ->setTargetUrl(\is_string($target) ? $target : ''));
+                }
+            } else {
+                foreach ($data['localisations'] as $language => $url) {
+                    $link->addLocalisation(new LinkLocalisation()->setLanguage((string) $language)->setTargetUrl(\is_string($url) ? $url : ''));
+                }
             }
         }
 

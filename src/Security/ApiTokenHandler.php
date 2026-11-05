@@ -28,8 +28,13 @@ final readonly class ApiTokenHandler implements AccessTokenHandlerInterface
             throw new BadCredentialsException('Invalid API token.');
         }
 
-        $token->markUsed();
-        $this->em->flush();
+        $lastUsed = $token->getLastUsedAt();
+        // Writing on every request would turn each API read into a write transaction.
+        // One write per minute is precise enough for the token's "last used" display.
+        if (null === $lastUsed || $lastUsed < new \DateTimeImmutable('-60 seconds')) {
+            $token->markUsed();
+            $this->em->flush();
+        }
         $user = $token->getUser();
 
         return new UserBadge($user->getUserIdentifier(), static fn () => $user);

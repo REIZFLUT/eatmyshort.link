@@ -68,7 +68,7 @@ final readonly class AppExtension
     #[AsTwigFunction('has_custom_logo')]
     public function hasCustomLogo(): bool
     {
-        return null !== $this->settings->get(Settings::LOGO);
+        return $this->settings->hasLogo();
     }
 
     #[AsTwigFunction('primary_admin_host')]

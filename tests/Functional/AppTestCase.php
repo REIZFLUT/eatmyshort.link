@@ -68,10 +68,11 @@ abstract class AppTestCase extends WebTestCase
      * Requests a page on a short-link host.
      *
      * @param array<string, string> $headers
+     * @param array<string, string> $server
      */
-    protected function shortRequest(string $host, string $path, array $headers = [], string $method = 'GET'): void
+    protected function shortRequest(string $host, string $path, array $headers = [], string $method = 'GET', array $server = []): void
     {
-        $server = ['HTTP_HOST' => $host];
+        $server = ['HTTP_HOST' => $host] + $server;
         foreach ($headers as $name => $value) {
             $server['HTTP_'.strtoupper(str_replace('-', '_', $name))] = $value;
         }

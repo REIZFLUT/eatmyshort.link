@@ -54,7 +54,7 @@ final class BrandingController extends AbstractController
     #[Route('/branding/logo', name: 'app_branding_logo', methods: ['GET'])]
     public function logo(Request $request, Settings $settings): Response
     {
-        $dataUri = $settings->get(Settings::LOGO);
+        $dataUri = $settings->getLogo();
         if (null === $dataUri || 1 !== preg_match('#^data:(image/(?:svg\+xml|png|webp));base64,(.+)$#', $dataUri, $m)) {
             throw $this->createNotFoundException();
         }

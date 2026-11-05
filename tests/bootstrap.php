@@ -4,7 +4,14 @@ declare(strict_types=1);
 
 use Symfony\Component\Dotenv\Dotenv;
 
-require dirname(__DIR__).'/vendor/autoload.php';
+$loader = require dirname(__DIR__).'/vendor/autoload.php';
+
+// vendor/ is a symlink to the main checkout in a git worktree; Composer then resolves
+// App\ to that checkout. Point the loader back here so the tests exercise this tree.
+if ($loader instanceof Composer\Autoload\ClassLoader) {
+    $loader->setPsr4('App\\', [dirname(__DIR__).'/src']);
+    $loader->setPsr4('App\\Tests\\', [__DIR__]);
+}
 
 new Dotenv()->bootEnv(dirname(__DIR__).'/.env');
 
@@ -16,7 +23,12 @@ if ('test' === $_SERVER['APP_ENV']) {
             unlink($file);
         }
     }
-    passthru(sprintf('%s %s/bin/console doctrine:migrations:migrate --no-interaction --quiet --env=test', escapeshellarg(PHP_BINARY), escapeshellarg(dirname(__DIR__))), $exitCode);
+    passthru(sprintf(
+        'DATABASE_URL=%s %s %s/bin/console doctrine:migrations:migrate --no-interaction --quiet --env=test',
+        escapeshellarg('sqlite:///'.$database),
+        escapeshellarg(PHP_BINARY),
+        escapeshellarg(dirname(__DIR__)),
+    ), $exitCode);
     if (0 !== $exitCode) {
         exit($exitCode);
     }

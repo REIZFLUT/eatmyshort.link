@@ -72,6 +72,7 @@ class Link
     #[ORM\OneToMany(targetEntity: LinkLocalisation::class, mappedBy: 'link', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['language' => \SortDirection::Ascending])]
     #[Assert\Valid]
+    #[Assert\Unique(fields: ['language'], message: 'localisation.language.duplicate', normalizer: [self::class, 'localisationKey'])]
     private Collection $localisations;
 
     #[ORM\Column]
@@ -247,6 +248,17 @@ class Link
         }
 
         return $targets;
+    }
+
+    /**
+     * Normaliser for the Assert\Unique constraint: the collection holds objects, while
+     * Unique compares array elements, so reduce each row to the field it looks at.
+     *
+     * @return array{language: string}
+     */
+    public static function localisationKey(LinkLocalisation $localisation): array
+    {
+        return ['language' => $localisation->getLanguage()];
     }
 
     public function getCreatedAt(): \DateTimeImmutable
