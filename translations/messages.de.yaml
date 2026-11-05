@@ -368,3 +368,32 @@ error.410: Diese Seite gibt es nicht mehr.
 error.429: Zu viele Anfragen. Bitte kurz warten.
 error.generic: Da ist etwas schiefgegangen.
 error.home: Zur Startseite
+
+tools.bookmarklet.title: Lesezeichen zum Kürzen
+tools.bookmarklet.intro: 'Ziehe einen der Knöpfe unten in die Lesezeichenleiste deines Browsers. Auf einer beliebigen Seite kürzt er dann die aktuelle Adresse zu einem Kurzlink dieser Installation.'
+tools.bookmarklet.privacy: 'Das Lesezeichen öffnet eine Seite auf %host% und übergibt nur die Adresse und den Titel der aktuellen Seite. Es werden keine Daten an Dritte gesendet und es läuft kein Code von fremden Servern.'
+tools.bookmarklet.drag_hint: 'Einrichten: den Knopf mit der Maus in die Lesezeichenleiste ziehen (oder als Lesezeichen speichern). Ein Klick auf dieser Hilfeseite selbst ist nicht nötig.'
+tools.bookmarklet.choose: Variante wählen
+tools.bookmarklet.standard: Standard
+tools.bookmarklet.standard_help: 'Öffnet das Link-Formular in einem Fenster; Ziel-URL und Titel sind schon ausgefüllt.'
+tools.bookmarklet.instant: Sofort kürzen
+tools.bookmarklet.instant_help: 'Öffnet die Bestätigungskarte, die den Link mit zufälligem Kürzel auf der Standard-Domain anlegt.'
+tools.bookmarklet.custom: Mit Wunschkürzel
+tools.bookmarklet.custom_help: 'Wie „Sofort kürzen“, fragt aber vorher per Eingabefeld nach einem Wunschkürzel.'
+tools.bookmarklet.goto: Kürzen und weiterleiten
+tools.bookmarklet.goto_help: 'Legt den Link mit zufälligem Kürzel an und springt danach direkt auf die Ziel-URL.'
+
+link.share: Teilen
+link.share_subject: 'Schau mal – Kurzlink'
+link.share_email: E-Mail
+link.quick_title: Link kürzen
+link.quick_confirm: Diesen Link zu einem Kurzlink machen?
+link.quick_target: Ziel-URL
+link.quick_missing_url: 'Keine gültige Adresse übergeben – bitte über das Formular öffnen.'
+link.quick_code: Kürzel (optional)
+link.quick_code_placeholder: zufällig
+link.quick_domain_hint: Der Kurzlink entsteht auf der Standard-Domain %domain%.
+link.quick_submit: Kürzen
+link.quick_open_form: Im Formular öffnen
+link.quick_cancel: Abbrechen
+flash.link_quick_created: 'Kurzlink erstellt: %url%'

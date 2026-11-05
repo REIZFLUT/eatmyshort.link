@@ -368,3 +368,32 @@ error.410: This page no longer exists.
 error.429: Too many requests. Please wait a moment.
 error.generic: Something went wrong.
 error.home: Home
+
+tools.bookmarklet.title: Bookmarklet to shorten
+tools.bookmarklet.intro: 'Drag one of the buttons below into your browser''s bookmarks bar. On any page it then shortens the current address to a short link on this installation.'
+tools.bookmarklet.privacy: 'The bookmarklet opens a page on %host% and only passes the current page''s address and title. No data is sent to third parties and no code from an external server runs.'
+tools.bookmarklet.drag_hint: 'To set it up: drag the button with the mouse into the bookmarks bar (or save it as a bookmark). Clicking on this help page itself is not needed.'
+tools.bookmarklet.choose: Choose a variant
+tools.bookmarklet.standard: Standard
+tools.bookmarklet.standard_help: 'Opens the link form in a window, with the target URL and title already filled in.'
+tools.bookmarklet.instant: Shorten right away
+tools.bookmarklet.instant_help: 'Opens the confirmation card that creates the link with a random code on your default domain.'
+tools.bookmarklet.custom: With a custom code
+tools.bookmarklet.custom_help: 'Like "shorten right away", but first asks for a custom code in a prompt.'
+tools.bookmarklet.goto: Shorten and redirect
+tools.bookmarklet.goto_help: 'Creates the link with a random code and then goes straight to the target URL.'
+
+link.share: Share
+link.share_subject: 'Take a look – short link'
+link.share_email: E-mail
+link.quick_title: Shorten link
+link.quick_confirm: Turn this link into a short link?
+link.quick_target: Target URL
+link.quick_missing_url: 'No valid address was passed – please open it via the form.'
+link.quick_code: Code (optional)
+link.quick_code_placeholder: random
+link.quick_domain_hint: The short link is created on your default domain %domain%.
+link.quick_submit: Shorten
+link.quick_open_form: Open in the form
+link.quick_cancel: Cancel
+flash.link_quick_created: 'Short link created: %url%'

@@ -27,6 +27,13 @@
                     <input type="text" readonly value="{{ link.shortUrl }}" id="short-url" class="short-url-input">
                     <button type="button" class="btn btn-primary" data-copy-target="#short-url" data-copied-label="{{ 'action.copied'|trans }}">{{ 'action.copy'|trans }}</button>
                 </div>
+                <div class="share">
+                    <span class="small muted">{{ 'link.share'|trans }}</span>
+                    <a class="btn btn-sm" href="https://twitter.com/intent/tweet?url={{ link.shortUrl|url_encode }}" rel="noopener noreferrer" target="_blank">X</a>
+                    <a class="btn btn-sm" href="https://www.linkedin.com/sharing/share-offsite/?url={{ link.shortUrl|url_encode }}" rel="noopener noreferrer" target="_blank">LinkedIn</a>
+                    <a class="btn btn-sm" href="https://www.facebook.com/sharer/sharer.php?u={{ link.shortUrl|url_encode }}" rel="noopener noreferrer" target="_blank">Facebook</a>
+                    <a class="btn btn-sm" href="mailto:?subject={{ 'link.share_subject'|trans|url_encode }}&body={{ link.shortUrl|url_encode }}">{{ 'link.share_email'|trans }}</a>
+                </div>
                 <hr>
                 <dl class="kv">
                     <dt>{{ 'link.target_url'|trans }}</dt>

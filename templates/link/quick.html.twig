@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'link.quick_title'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head"><h1>{{ 'link.quick_title'|trans }}</h1></div>
+
+        {% if violations is defined and violations is not empty %}
+            <ul class="errors">
+                {% for message in violations %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <div class="card">
+            {% if domain is null %}
+                <p class="muted">{{ 'flash.no_domains'|trans }}</p>
+            {% else %}
+                <p>{{ 'link.quick_confirm'|trans }}</p>
+                <dl class="kv">
+                    <dt>{{ 'link.quick_target'|trans }}</dt>
+                    <dd>
+                        {% if url %}
+                            <a href="{{ url }}" rel="noopener noreferrer" target="_blank">{{ url }}</a>
+                        {% else %}
+                            <span class="muted">{{ 'link.quick_missing_url'|trans }}</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+
+                <form method="post" action="{{ path('app_link_quick') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('link-quick') }}">
+                    <input type="hidden" name="url" value="{{ url }}">
+                    <input type="hidden" name="title" value="{{ title }}">
+                    {% if goto %}<input type="hidden" name="goto" value="1">{% endif %}
+
+                    <div class="field">
+                        <label for="quick-code">{{ 'link.quick_code'|trans }}</label>
+                        <input type="text" id="quick-code" name="code" value="{{ code }}" placeholder="{{ 'link.quick_code_placeholder'|trans }}" pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}" autocapitalize="off" spellcheck="false">
+                        <div class="help">{{ 'link.code_help'|trans }}</div>
+                    </div>
+
+                    <p class="small muted">{{ 'link.quick_domain_hint'|trans({'%domain%': domain.displayName}) }}</p>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">{{ 'link.quick_submit'|trans }}</button>
+                        {% if url %}
+                            <a class="btn btn-ghost" href="{{ path('app_link_new', {url: url, title: title}) }}">{{ 'link.quick_open_form'|trans }}</a>
+                        {% endif %}
+                        <a class="btn btn-ghost" href="{{ path('app_dashboard') }}">{{ 'link.quick_cancel'|trans }}</a>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
