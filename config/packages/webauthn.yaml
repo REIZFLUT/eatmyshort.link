@@ -1,0 +1,23 @@
+# https://webauthn-doc.spomky-labs.com/the-webauthn-server/the-symfony-way
+webauthn:
+    credential_repository: App\Repository\WebauthnCredentialRepository
+    user_repository: App\Security\Webauthn\WebauthnUserRepository
+    creation_profiles:
+        default:
+            rp:
+                name: 'EatMyShort.Link'
+                id: '%env(first_host:APP_ADMIN_HOSTS)%'
+            authenticator_selection_criteria:
+                resident_key: required
+                user_verification: required
+    request_profiles:
+        default:
+            rp_id: '%env(first_host:APP_ADMIN_HOSTS)%'
+            user_verification: required
+    controllers:
+        enabled: true
+        creation:
+            profile_passkey:
+                options_path: /profile/passkeys/options
+                result_path: /profile/passkeys/register
+                user_entity_guesser: Webauthn\Bundle\Security\Guesser\CurrentUserEntityGuesser

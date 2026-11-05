@@ -1,0 +1,268 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Entity;
+
+use App\Repository\LinkRepository;
+use App\Validator\ShortCode;
+use App\Validator\TargetUrl;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ORM\Entity(repositoryClass: LinkRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_link_domain_code', columns: ['domain_id', 'code'])]
+#[ORM\Index(name: 'idx_link_owner', columns: ['owner_id'])]
+#[UniqueEntity(fields: ['domain', 'code'], message: 'link.code.taken', errorPath: 'code')]
+class Link
+{
+    public const array REDIRECT_TYPES = [302, 301, 307, 308];
+
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull]
+    private ?Domain $domain = null;
+
+    /** Lowercase path segment after the domain, unique per domain. */
+    #[ORM\Column(length: 64)]
+    #[Assert\NotBlank]
+    #[ShortCode]
+    private string $code = '';
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private User $owner;
+
+    #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank]
+    #[TargetUrl]
+    private string $targetUrl = '';
+
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Length(max: 255)]
+    private ?string $title = null;
+
+    #[ORM\Column(type: Types::SMALLINT)]
+    #[Assert\Choice(choices: self::REDIRECT_TYPES)]
+    private int $redirectType = 302;
+
+    #[ORM\Column]
+    private bool $active = true;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $expiresAt = null;
+
+    /** Human clicks (bots excluded), maintained by the ClickRecorder. */
+    #[ORM\Column]
+    private int $clickCount = 0;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastClickAt = null;
+
+    /** @var Collection<int, LinkLocalisation> */
+    #[ORM\OneToMany(targetEntity: LinkLocalisation::class, mappedBy: 'link', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['language' => 'ASC'])]
+    #[Assert\Valid]
+    private Collection $localisations;
+
+    #[ORM\Column]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column]
+    private \DateTimeImmutable $updatedAt;
+
+    public function __construct(User $owner)
+    {
+        $this->owner = $owner;
+        $this->localisations = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
+        $this->updatedAt = $this->createdAt;
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getDomain(): ?Domain
+    {
+        return $this->domain;
+    }
+
+    public function setDomain(?Domain $domain): static
+    {
+        $this->domain = $domain;
+
+        return $this;
+    }
+
+    public function getCode(): string
+    {
+        return $this->code;
+    }
+
+    public function setCode(?string $code): static
+    {
+        $this->code = mb_strtolower(trim((string) $code, " \t\n\r\0\x0B/"));
+
+        return $this;
+    }
+
+    public function getShortUrl(string $scheme = 'https'): string
+    {
+        return \sprintf('%s://%s/%s', $scheme, $this->domain?->getHostname() ?? '', $this->code);
+    }
+
+    public function getOwner(): User
+    {
+        return $this->owner;
+    }
+
+    public function setOwner(User $owner): static
+    {
+        $this->owner = $owner;
+
+        return $this;
+    }
+
+    public function getTargetUrl(): string
+    {
+        return $this->targetUrl;
+    }
+
+    public function setTargetUrl(?string $targetUrl): static
+    {
+        $this->targetUrl = trim((string) $targetUrl);
+
+        return $this;
+    }
+
+    public function getTitle(): ?string
+    {
+        return $this->title;
+    }
+
+    public function setTitle(?string $title): static
+    {
+        $this->title = '' === trim((string) $title) ? null : trim((string) $title);
+
+        return $this;
+    }
+
+    public function getRedirectType(): int
+    {
+        return $this->redirectType;
+    }
+
+    public function setRedirectType(int $redirectType): static
+    {
+        $this->redirectType = $redirectType;
+
+        return $this;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->active;
+    }
+
+    public function setActive(bool $active): static
+    {
+        $this->active = $active;
+
+        return $this;
+    }
+
+    public function getExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->expiresAt;
+    }
+
+    public function setExpiresAt(?\DateTimeImmutable $expiresAt): static
+    {
+        $this->expiresAt = $expiresAt;
+
+        return $this;
+    }
+
+    public function isExpired(?\DateTimeImmutable $now = null): bool
+    {
+        return null !== $this->expiresAt && $this->expiresAt <= ($now ?? new \DateTimeImmutable());
+    }
+
+    /** Active, not expired and on an active domain. */
+    public function isLive(?\DateTimeImmutable $now = null): bool
+    {
+        return $this->active && !$this->isExpired($now) && true === $this->domain?->isActive();
+    }
+
+    public function getClickCount(): int
+    {
+        return $this->clickCount;
+    }
+
+    public function getLastClickAt(): ?\DateTimeImmutable
+    {
+        return $this->lastClickAt;
+    }
+
+    /** @return Collection<int, LinkLocalisation> */
+    public function getLocalisations(): Collection
+    {
+        return $this->localisations;
+    }
+
+    public function addLocalisation(LinkLocalisation $localisation): static
+    {
+        if (!$this->localisations->contains($localisation)) {
+            $this->localisations->add($localisation);
+            $localisation->setLink($this);
+        }
+
+        return $this;
+    }
+
+    public function removeLocalisation(LinkLocalisation $localisation): static
+    {
+        $this->localisations->removeElement($localisation);
+
+        return $this;
+    }
+
+    /** @return array<string, string> language => target url */
+    public function getLocalisedTargets(): array
+    {
+        $targets = [];
+        foreach ($this->localisations as $localisation) {
+            $targets[$localisation->getLanguage()] = $localisation->getTargetUrl();
+        }
+
+        return $targets;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): \DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    public function touch(): static
+    {
+        $this->updatedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+}

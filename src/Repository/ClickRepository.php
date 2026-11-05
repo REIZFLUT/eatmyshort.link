@@ -1,0 +1,146 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repository;
+
+use App\Entity\Click;
+use App\Entity\Link;
+use App\Entity\User;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\Persistence\ManagerRegistry;
+
+/**
+ * Statistics queries. Bots are always excluded. The scope is either a single link,
+ * all links of an owner, or everything (admin overview).
+ *
+ * @extends ServiceEntityRepository<Click>
+ */
+class ClickRepository extends ServiceEntityRepository
+{
+    public const array BREAKDOWN_FIELDS = ['referrerHost', 'countryCode', 'deviceType', 'browser', 'os', 'language'];
+
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Click::class);
+    }
+
+    /**
+     * @return array<string, array{clicks: int, visitors: int}> keyed by Y-m-d, only days with clicks
+     */
+    public function perDay(\DateTimeImmutable $from, \DateTimeImmutable $to, ?Link $link = null, ?User $owner = null): array
+    {
+        $rows = $this->scoped($from, $to, $link, $owner)
+            ->select('c.clickedDay AS day', 'COUNT(c.id) AS clicks', 'COUNT(DISTINCT c.visitorHash) AS visitors')
+            ->groupBy('c.clickedDay')
+            ->getQuery()
+            ->getArrayResult();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $day = $row['day'] instanceof \DateTimeInterface ? $row['day']->format('Y-m-d') : substr((string) $row['day'], 0, 10);
+            $result[$day] = ['clicks' => (int) $row['clicks'], 'visitors' => (int) $row['visitors']];
+        }
+
+        return $result;
+    }
+
+    /** @return array{clicks: int, visitors: int} */
+    public function totals(\DateTimeImmutable $from, \DateTimeImmutable $to, ?Link $link = null, ?User $owner = null): array
+    {
+        $row = $this->scoped($from, $to, $link, $owner)
+            ->select('COUNT(c.id) AS clicks', 'COUNT(DISTINCT c.visitorHash) AS visitors')
+            ->getQuery()
+            ->getSingleResult();
+
+        return ['clicks' => (int) $row['clicks'], 'visitors' => (int) $row['visitors']];
+    }
+
+    /**
+     * @return list<array{value: ?string, clicks: int}>
+     */
+    public function breakdown(string $field, \DateTimeImmutable $from, \DateTimeImmutable $to, ?Link $link = null, ?User $owner = null, int $limit = 10): array
+    {
+        if (!\in_array($field, self::BREAKDOWN_FIELDS, true)) {
+            throw new \InvalidArgumentException(\sprintf('Unknown breakdown field "%s".', $field));
+        }
+
+        $rows = $this->scoped($from, $to, $link, $owner)
+            ->select("c.$field AS value", 'COUNT(c.id) AS clicks')
+            ->groupBy("c.$field")
+            ->orderBy('clicks', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $row): array => ['value' => $row['value'], 'clicks' => (int) $row['clicks']], $rows);
+    }
+
+    /**
+     * @return list<array{link: Link, clicks: int}>
+     */
+    public function topLinks(\DateTimeImmutable $from, \DateTimeImmutable $to, ?User $owner = null, int $limit = 10): array
+    {
+        $rows = $this->scoped($from, $to, null, $owner)
+            ->select('IDENTITY(c.link) AS linkId', 'COUNT(c.id) AS clicks')
+            ->groupBy('c.link')
+            ->orderBy('clicks', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        $links = [];
+        $repo = $this->getEntityManager()->getRepository(Link::class);
+        foreach ($rows as $row) {
+            $linkEntity = $repo->find($row['linkId']);
+            if (null !== $linkEntity) {
+                $links[] = ['link' => $linkEntity, 'clicks' => (int) $row['clicks']];
+            }
+        }
+
+        return $links;
+    }
+
+    /** @return iterable<Click> */
+    public function iterateForExport(Link $link, \DateTimeImmutable $from, \DateTimeImmutable $to): iterable
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.link = :link')
+            ->andWhere('c.clickedDay BETWEEN :from AND :to')
+            ->setParameter('link', $link)
+            ->setParameter('from', $from, Types::DATE_IMMUTABLE)
+            ->setParameter('to', $to, Types::DATE_IMMUTABLE)
+            ->orderBy('c.clickedAt', 'ASC')
+            ->getQuery()
+            ->toIterable();
+    }
+
+    public function deleteOlderThan(\DateTimeImmutable $day): int
+    {
+        return $this->createQueryBuilder('c')
+            ->delete()
+            ->where('c.clickedDay < :day')
+            ->setParameter('day', $day, Types::DATE_IMMUTABLE)
+            ->getQuery()
+            ->execute();
+    }
+
+    private function scoped(\DateTimeImmutable $from, \DateTimeImmutable $to, ?Link $link, ?User $owner): QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('c')
+            ->where('c.bot = false')
+            ->andWhere('c.clickedDay BETWEEN :from AND :to')
+            ->setParameter('from', $from, Types::DATE_IMMUTABLE)
+            ->setParameter('to', $to, Types::DATE_IMMUTABLE);
+
+        if (null !== $link) {
+            $qb->andWhere('c.link = :link')->setParameter('link', $link);
+        } elseif (null !== $owner) {
+            $qb->innerJoin('c.link', 'l')->andWhere('l.owner = :owner')->setParameter('owner', $owner);
+        }
+
+        return $qb;
+    }
+}

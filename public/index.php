@@ -1,9 +1,9 @@
 <?php
-require __DIR__ . '/../continy/__bootstrap.php';
 
-use App\Models\EMSLConfig;
-use Continy\Core\App;
+use App\Kernel;
 
-$app = new App;
-$app->setTimezone(EMSLConfig::get('timezone'));
-$app->run();
+require_once dirname(__DIR__).'/vendor/autoload_runtime.php';
+
+return static function (array $context) {
+    return new Kernel($context['APP_ENV'], (bool) $context['APP_DEBUG']);
+};

@@ -1,0 +1,28 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+    trusted_proxies: '%env(default::TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
+
+    session:
+        name: emsl_session
+        cookie_secure: auto
+        cookie_samesite: lax
+        cookie_httponly: true
+        gc_maxlifetime: 28800
+
+    rate_limiter:
+        api:
+            policy: sliding_window
+            limit: 120
+            interval: '1 minute'
+        password_reset:
+            policy: fixed_window
+            limit: 5
+            interval: '1 hour'
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file

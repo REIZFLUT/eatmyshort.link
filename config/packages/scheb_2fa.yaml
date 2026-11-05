@@ -1,0 +1,13 @@
+# https://symfony.com/bundles/SchebTwoFactorBundle/current/configuration.html
+scheb_two_factor:
+    # Only password logins ask for TOTP; passkey logins (WebauthnToken) are already two-factor.
+    security_tokens:
+        - Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken
+    totp:
+        enabled: true
+        issuer: 'EatMyShort.Link'
+        server_name: '%env(first_host:APP_ADMIN_HOSTS)%'
+        leeway: 15
+        template: security/2fa_form.html.twig
+    backup_codes:
+        enabled: true
