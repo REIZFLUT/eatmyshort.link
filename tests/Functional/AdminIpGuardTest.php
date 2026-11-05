@@ -34,6 +34,29 @@ final class AdminIpGuardTest extends AppTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testEncodedAdminPathsAreBlocked(): void
+    {
+        $admin = $this->createUser('root@example.com', admin: true);
+        $this->em()->persist(new AdminIpRule('10.0.0.0/8', 'VPN'));
+        $this->em()->flush();
+        $this->client->loginUser($admin);
+
+        // The router decodes the path before matching, so /%61dmin used to slip past the guard.
+        foreach (['/admin/users', '/%61dmin/users', '/%61dmin/settings'] as $path) {
+            $this->client->request('GET', $path);
+            self::assertResponseStatusCodeSame(403, 'blocked from outside: '.$path);
+        }
+
+        // Double encoding matches no route at all, so the router 404s before anything runs.
+        $this->client->request('GET', '/%2561dmin/users');
+        self::assertResponseStatusCodeSame(404, 'a doubly encoded path never reaches admin code');
+
+        foreach (['/admin/users', '/%61dmin/users', '/%61dmin/settings'] as $path) {
+            $this->client->request('GET', $path, server: ['REMOTE_ADDR' => '10.1.2.3']);
+            self::assertResponseIsSuccessful('allowed from the VPN: '.$path);
+        }
+    }
+
     public function testAdminOutsideAllowlistActsLikeNormalUser(): void
     {
         $admin = $this->createUser('root@example.com', admin: true);
@@ -72,7 +95,8 @@ final class AdminIpGuardTest extends AppTestCase
         $this->client->loginUser($this->createUser('root@example.com', admin: true));
 
         $crawler = $this->client->request('GET', '/admin/ip-rules');
-        $token = $crawler->filter('input[name=_token]')->attr('value');
+        // Several forms on the page carry a _token (logout, delete); take the add form's.
+        $token = $crawler->filter('form.form-row input[name=_token]')->attr('value');
 
         $this->client->request('POST', '/admin/ip-rules', ['cidr' => '10.0.0.0/8', 'label' => 'VPN', '_token' => $token]);
         self::assertResponseStatusCodeSame(422);

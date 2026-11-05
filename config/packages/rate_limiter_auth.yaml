@@ -1,0 +1,10 @@
+# Rate limits that only apply to authentication flows. Kept out of framework.yaml
+# so the general rate limiting stays untouched.
+framework:
+    rate_limiter:
+        # One mailbox may trigger three reset mails per hour, no matter which
+        # address the request comes from. Prevents mail bombing via many IPs.
+        password_reset_email:
+            policy: fixed_window
+            limit: 3
+            interval: '1 hour'

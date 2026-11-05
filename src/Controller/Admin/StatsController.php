@@ -14,7 +14,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+#[IsGranted('ADMIN_ACCESS')]
 final class StatsController extends AbstractController
 {
     #[Route('/admin/stats', name: 'app_admin_stats', methods: ['GET'])]

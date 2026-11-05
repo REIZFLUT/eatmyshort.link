@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\ResetToken;
 use App\Form\ChangePasswordType;
 use App\Mail\AccountMailer;
+use App\Mail\DeferredMailer;
 use App\Repository\ResetTokenRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -34,7 +35,7 @@ final class SecurityController extends AbstractController
         ]);
     }
 
-    #[Route('/logout', name: 'app_logout', methods: ['GET'])]
+    #[Route('/logout', name: 'app_logout', methods: ['POST'])]
     public function logout(): never
     {
         throw new \LogicException('Handled by the firewall.');
@@ -45,18 +46,27 @@ final class SecurityController extends AbstractController
         Request $request,
         UserRepository $users,
         AccountMailer $mailer,
+        DeferredMailer $deferred,
         #[Autowire(service: 'limiter.password_reset')]
         RateLimiterFactoryInterface $passwordResetLimiter,
+        #[Autowire(service: 'limiter.password_reset_email')]
+        RateLimiterFactoryInterface $passwordResetEmailLimiter,
     ): Response {
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('reset_request', (string) $request->request->get('_token'))) {
                 throw $this->createAccessDeniedException();
             }
             $email = (string) $request->request->get('email');
-            $limit = $passwordResetLimiter->create($request->getClientIp().'|'.mb_strtolower($email))->consume();
+            $normalized = mb_strtolower(trim($email));
+            // Per IP and per mailbox: the address alone is limited too, so many
+            // IPs cannot flood one inbox.
+            $limit = $passwordResetLimiter->create($request->getClientIp().'|'.$normalized)->consume();
+            $emailLimit = $passwordResetEmailLimiter->create($normalized)->consume();
             $user = $users->findOneByEmail($email);
-            if ($limit->isAccepted() && null !== $user && $user->isActive()) {
-                $mailer->sendAccountLink($user, ResetToken::PURPOSE_RESET);
+            if ($limit->isAccepted() && $emailLimit->isAccepted() && null !== $user && $user->isActive()) {
+                // The mail goes out after the response; nothing here reveals
+                // whether the address exists or how long the transport takes.
+                $deferred->defer(static fn () => $mailer->sendAccountLink($user, ResetToken::PURPOSE_RESET));
             }
 
             // Same answer whether the address exists or not.

@@ -1,1 +1,10 @@
 login.inactive: Dieses Konto ist gesperrt.
+
+# Zwei-Faktor-Anmeldung. Die Schlüssel kommen unverändert aus dem Scheb-TwoFactorBundle
+# bzw. aus Symphonys Login-Drosselung.
+code_invalid: Der Bestätigungs-Code ist nicht korrekt.
+code_reused: Dieser Bestätigungs-Code wurde bereits verwendet.
+'Two-factor provider not found.': Der Zwei-Faktor-Anbieter ist nicht verfügbar.
+'Too many failed login attempts, please try again later.': Zu viele Fehlversuche. Versuch es später noch einmal.
+'Too many failed login attempts, please try again in %minutes% minute.': Zu viele Fehlversuche. Versuch es in %minutes% Minute noch einmal.
+'Too many failed login attempts, please try again in %minutes% minutes.': Zu viele Fehlversuche. Versuch es in %minutes% Minuten noch einmal.

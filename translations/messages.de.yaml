@@ -339,6 +339,7 @@ flash.no_domains: Dir ist noch keine Domain freigegeben. Ein Admin muss dir eine
 flash.passkey_deleted: Passkey gelöscht.
 flash.passkey_last: Das ist dein letzter Anmeldeweg. Lege zuerst ein Passwort oder einen weiteren Passkey an.
 flash.password_changed: Passwort geändert.
+flash.password_login_passkey_only: Für dieses Konto ist ein Passkey hinterlegt. Bitte melde dich mit deinem Passkey an – oder richte zuerst einen Zwei-Faktor-Code ein.
 flash.profile_saved: Profil gespeichert.
 flash.settings_saved: Einstellungen gespeichert.
 flash.token_deleted: Token widerrufen.

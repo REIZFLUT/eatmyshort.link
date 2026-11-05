@@ -37,7 +37,10 @@
             </nav>
             <div class="usermenu">
                 <a href="{{ path('app_profile') }}" class="{{ route starts with 'app_profile' ? 'active' }}" title="{{ 'nav.profile'|trans }}">{{ app.user.displayName }}</a>
-                <a href="{{ path('app_logout') }}" class="btn btn-sm">{{ 'nav.logout'|trans }}</a>
+                <form method="post" action="{{ path('app_logout') }}" class="inline-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
+                    <button type="submit" class="btn btn-sm">{{ 'nav.logout'|trans }}</button>
+                </form>
             </div>
         </div>
     </header>
