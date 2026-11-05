@@ -16,6 +16,15 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class LinkRepository extends ServiceEntityRepository
 {
+    /** @var array<string, string> sort key => DQL expression */
+    private const array SORT_FIELDS = [
+        'created' => 'l.createdAt',
+        'clicks' => 'l.clickCount',
+        'last_click' => 'l.lastClickAt',
+        'target' => 'LOWER(l.targetUrl)',
+        'code' => 'LOWER(l.code)',
+    ];
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Link::class);
@@ -53,15 +62,25 @@ class LinkRepository extends ServiceEntityRepository
     }
 
     /**
-     * Links of the user, or all links for admins ($onlyOwn = false), optionally filtered.
+     * Links of the user, or all links for admins ($onlyOwn = false), optionally filtered and sorted.
+     *
+     * The sort key is whitelisted here: unknown keys fall back to the default (created/desc),
+     * so callers that pass no sort (API, dashboard) keep the previous behaviour. A stable id
+     * tie-breaker keeps pagination deterministic when the primary sort key ties.
+     *
+     * @param string $sort one of created, clicks, last_click, target, code
+     * @param string $dir  asc or desc
      */
-    public function searchQuery(User $user, ?string $search = null, ?Domain $domain = null, bool $onlyOwn = true): QueryBuilder
+    public function searchQuery(User $user, ?string $search = null, ?Domain $domain = null, bool $onlyOwn = true, string $sort = 'created', string $dir = 'desc'): QueryBuilder
     {
+        $field = self::SORT_FIELDS[$sort] ?? self::SORT_FIELDS['created'];
+        $direction = 'asc' === mb_strtolower($dir) ? \SortDirection::Ascending : \SortDirection::Descending;
+
         $qb = $this->createQueryBuilder('l')
             ->addSelect('d', 'o')
             ->innerJoin('l.domain', 'd')
             ->innerJoin('l.owner', 'o')
-            ->orderBy('l.createdAt', \SortDirection::Descending)
+            ->orderBy($field, $direction)
             ->addOrderBy('l.id', \SortDirection::Descending);
 
         if ($onlyOwn) {

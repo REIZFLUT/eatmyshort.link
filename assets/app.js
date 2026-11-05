@@ -41,12 +41,23 @@ document.addEventListener('click', async (event) => {
     }
 });
 
-// Confirm before destructive submits: <form data-confirm="Really?">
+// Confirm before destructive submits: <form data-confirm="Really?"> or, when a form has
+// several submit buttons, a single button <button data-confirm="Really?">.
 document.addEventListener('submit', (event) => {
-    const message = event.target.dataset?.confirm;
+    const message = event.submitter?.dataset?.confirm ?? event.target.dataset?.confirm;
     if (message && !window.confirm(message)) {
         event.preventDefault();
     }
+});
+
+// Bulk selection: a header checkbox <input data-check-all="<selector>"> toggles every
+// matching box (row checkboxes live in the table, the form itself sits outside it).
+document.addEventListener('change', (event) => {
+    const all = event.target.closest('[data-check-all]');
+    if (!all) return;
+    document.querySelectorAll(all.dataset.checkAll).forEach((box) => {
+        box.checked = all.checked;
+    });
 });
 
 // Collection rows (localised targets): add from data-prototype, remove per row.
