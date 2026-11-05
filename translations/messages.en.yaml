@@ -154,6 +154,8 @@ stats.period_days: '%days% days'
 stats.chart_hint: Bots and link previews are not counted. Hover a bar for clicks / visitors.
 stats.no_data: No data yet.
 stats.unknown: unknown
+stats.direct: direct / unknown
+stats.no_countries: Countries are only resolved with a GeoIP database (see settings).
 stats.top_links: Most clicked links
 stats.overview: '%links% links · %users% users · %domains% domains'
 stats.breakdown.referrerHost: Referrers

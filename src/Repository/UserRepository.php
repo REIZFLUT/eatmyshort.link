@@ -57,7 +57,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('u')
-            ->orderBy('u.displayName', 'ASC')
+            ->orderBy('u.displayName', \SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

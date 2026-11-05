@@ -115,7 +115,9 @@ final readonly class AppExtension
         $step = max(1, (int) ceil($count / 8));
         foreach ($series as $i => $point) {
             if (0 === $i % $step) {
-                $labels .= \sprintf('<text class="chart-label" x="%.2f" y="%d" text-anchor="middle">%s</text>', $i * $slot + $slot / 2, $height - 6, $point['day']->format('d.m.'));
+                $anchor = 0 === $i ? 'start' : ($i === $count - 1 ? 'end' : 'middle');
+                $x = 0 === $i ? $i * $slot : ($i === $count - 1 ? ($i + 1) * $slot : $i * $slot + $slot / 2);
+                $labels .= \sprintf('<text class="chart-label" x="%.2f" y="%d" text-anchor="%s">%s</text>', $x, $height - 6, $anchor, $point['day']->format('d.m.'));
             }
         }
 

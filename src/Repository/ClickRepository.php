@@ -70,7 +70,7 @@ class ClickRepository extends ServiceEntityRepository
         $rows = $this->scoped($from, $to, $link, $owner)
             ->select("c.$field AS value", 'COUNT(c.id) AS clicks')
             ->groupBy("c.$field")
-            ->orderBy('clicks', 'DESC')
+            ->orderBy('clicks', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getArrayResult();
@@ -89,7 +89,7 @@ class ClickRepository extends ServiceEntityRepository
         $rows = $this->scoped($from, $to, null, $owner)
             ->select('IDENTITY(c.link) AS linkId', 'COUNT(c.id) AS clicks')
             ->groupBy('c.link')
-            ->orderBy('clicks', 'DESC')
+            ->orderBy('clicks', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getArrayResult();
@@ -115,7 +115,7 @@ class ClickRepository extends ServiceEntityRepository
             ->setParameter('link', $link)
             ->setParameter('from', $from, Types::DATE_IMMUTABLE)
             ->setParameter('to', $to, Types::DATE_IMMUTABLE)
-            ->orderBy('c.clickedAt', 'ASC')
+            ->orderBy('c.clickedAt', \SortDirection::Ascending)
             ->getQuery()
             ->toIterable();
     }

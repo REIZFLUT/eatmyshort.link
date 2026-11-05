@@ -48,7 +48,7 @@
                             {% for passkey in passkeys %}
                                 <tr>
                                     <td>
-                                        <form method="post" action="{{ path('app_profile_passkey_rename', {id: passkey.id}) }}" class="copy-field">
+                                        <form method="post" action="{{ path('app_profile_passkey_rename', {id: passkey.id}) }}" class="copy-field rename-field">
                                             <input type="text" name="name" value="{{ passkey.name }}" maxlength="100" aria-label="{{ 'passkey.name'|trans }}">
                                             <input type="hidden" name="_token" value="{{ csrf_token('passkey-rename-' ~ passkey.id) }}">
                                             <button class="btn btn-sm">{{ 'action.save'|trans }}</button>

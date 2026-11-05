@@ -8,14 +8,19 @@ use DeviceDetector\Cache\PSR6Bridge;
 use DeviceDetector\ClientHints;
 use DeviceDetector\DeviceDetector;
 use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Thin wrapper around matomo/device-detector.
+ * Thin wrapper around matomo/device-detector. Its parsed regex lists are static data,
+ * so they live in cache.system (APCu or opcache-backed PHP files): uncached, one parse
+ * costs ~300 ms; from a file cache that is re-read on every request still far too much.
  */
 final readonly class UserAgentInspector
 {
-    public function __construct(private CacheItemPoolInterface $cacheApp)
-    {
+    public function __construct(
+        #[Autowire(service: 'cache.system')]
+        private CacheItemPoolInterface $cache,
+    ) {
     }
 
     /**
@@ -31,7 +36,7 @@ final readonly class UserAgentInspector
         }
 
         $detector = new DeviceDetector($userAgent, ClientHints::factory($headers));
-        $detector->setCache(new PSR6Bridge($this->cacheApp));
+        $detector->setCache(new PSR6Bridge($this->cache));
         $detector->discardBotInformation();
         $detector->parse();
 

@@ -110,7 +110,7 @@ links.only_mine: Nur meine
 links.empty: Hier gibt es noch keine Links.
 links.export_csv: CSV-Export
 links.delete: Link löschen
-links.delete_text: Der Kurzlink funktioniert danach nicht mehr, die Statistik wird mit gelöscht. Zum vorübergehenden Abschalten lieber „Aktiv" ausschalten.
+links.delete_text: Der Kurzlink funktioniert danach nicht mehr, die Statistik wird mit gelöscht. Zum vorübergehenden Abschalten lieber „Aktiv“ ausschalten.
 links.delete_confirm: Link und Statistik endgültig löschen?
 links.col.link: Link
 links.col.owner: Besitzer
@@ -120,7 +120,7 @@ links.col.created: Angelegt
 link.target_url: Ziel-URL
 link.domain: Domain
 link.code: Kürzel
-link.code_help: Kleinbuchstaben, Ziffern, „-" und „_". Leer lassen für ein zufälliges Kürzel.
+link.code_help: Kleinbuchstaben, Ziffern, „-“ und „_“. Leer lassen für ein zufälliges Kürzel.
 link.code_placeholder: zufällig
 link.title: Titel (intern)
 link.options: Optionen
@@ -136,7 +136,7 @@ link.inactive: inaktiv
 link.expired: abgelaufen
 link.live: aktiv
 link.localisations: Sprachabhängige Ziele
-link.localisations_help: Besucher, deren Browser eine dieser Sprachen bevorzugt, landen auf der jeweiligen Ziel-URL. Alle anderen auf der Standard-Ziel-URL. „de" passt auch auf „de-AT".
+link.localisations_help: Besucher, deren Browser eine dieser Sprachen bevorzugt, landen auf der jeweiligen Ziel-URL. Alle anderen auf der Standard-Ziel-URL. „de“ passt auch auf „de-AT“.
 link.add_localisation: Sprache hinzufügen
 link.short_url: Kurzlink
 link.qr: QR-Code
@@ -154,6 +154,8 @@ stats.period_days: '%days% Tage'
 stats.chart_hint: Bots und Link-Vorschauen werden nicht gezählt. Fahre über einen Balken für Klicks / Besucher.
 stats.no_data: Noch keine Daten.
 stats.unknown: unbekannt
+stats.direct: direkt / unbekannt
+stats.no_countries: Länder werden nur mit einer GeoIP-Datenbank ermittelt (siehe Einstellungen).
 stats.top_links: Meistgeklickte Links
 stats.overview: '%links% Links · %users% Nutzer · %domains% Domains'
 stats.breakdown.referrerHost: Herkunft
@@ -246,7 +248,7 @@ domains.empty_text: Lege die erste Kurzlink-Domain an, z. B. go.firma.de.
 domains.setup_title: Einrichtung
 domains.setup_text: 'Damit eine Domain funktioniert, muss ihr DNS-Eintrag (A/AAAA oder CNAME) auf diesen Server zeigen und der Webserver sie an dieselbe Anwendung geben wie %host%. TLS-Zertifikate (z. B. Let''s Encrypt) richtet der Webserver ein. Die Verwaltung bleibt nur unter %host% erreichbar.'
 domains.delete: Domain löschen
-domains.delete_text: Geht nur, solange keine Links mehr auf der Domain liegen. Zum Abschalten lieber „Aktiv" ausschalten.
+domains.delete_text: Geht nur, solange keine Links mehr auf der Domain liegen. Zum Abschalten lieber „Aktiv“ ausschalten.
 domains.delete_confirm: Domain wirklich löschen?
 
 domain.hostname: Hostname

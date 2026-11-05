@@ -1,4 +1,5 @@
-import './styles/app.css';
+// The stylesheet is linked in base.html.twig: a CSS import would become a data: URL in the
+// import map, which the Content-Security-Policy (rightly) blocks.
 import { initPasskeys } from './js/passkey.js';
 
 // Copy buttons: <button data-copy="text"> or data-copy-target="#input">

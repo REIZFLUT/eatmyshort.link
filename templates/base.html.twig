@@ -7,6 +7,7 @@
     <title>{% block title %}{% endblock %}{% if block('title') is not empty %} · {% endif %}{{ app_title() }}</title>
     <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     <link rel="stylesheet" href="{{ path('app_branding_css') }}">
     {% block importmap %}{{ importmap('app', {nonce: csp_nonce()}) }}{% endblock %}
 </head>

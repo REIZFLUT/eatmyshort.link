@@ -27,13 +27,15 @@
                 <h3>{{ ('stats.breakdown.' ~ field)|trans }}</h3>
                 {% if rows is empty %}
                     <p class="muted small">{{ 'stats.no_data'|trans }}</p>
+                {% elseif field == 'countryCode' and rows|length == 1 and rows[0].value is null %}
+                    <p class="muted small">{{ 'stats.no_countries'|trans }}</p>
                 {% else %}
                     {% set max = rows|first.clicks %}
                     <ul class="breakdown">
                         {% for row in rows %}
                             <li>
                                 <span class="truncate">
-                                    {% if row.value is null %}<span class="muted">{{ 'stats.unknown'|trans }}</span>
+                                    {% if row.value is null %}<span class="muted">{{ (field == 'referrerHost' ? 'stats.direct' : 'stats.unknown')|trans }}</span>
                                     {% elseif field == 'countryCode' %}{{ row.value|country_name(app.request.locale) }}
                                     {% elseif field == 'language' %}{{ row.value|language_name(app.request.locale) }}
                                     {% elseif field == 'deviceType' %}{{ ('device.' ~ row.value)|trans }}

@@ -40,8 +40,8 @@ class DomainRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('d')
             ->where('d.active = true')
-            ->orderBy('d.isDefault', 'DESC')
-            ->addOrderBy('d.hostname', 'ASC');
+            ->orderBy('d.isDefault', \SortDirection::Descending)
+            ->addOrderBy('d.hostname', \SortDirection::Ascending);
 
         if (!$user->isAdmin()) {
             $qb->innerJoin('d.users', 'u')->andWhere('u = :user')->setParameter('user', $user);

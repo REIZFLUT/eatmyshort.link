@@ -57,8 +57,8 @@ class LinkRepository extends ServiceEntityRepository
             ->addSelect('d', 'o')
             ->innerJoin('l.domain', 'd')
             ->innerJoin('l.owner', 'o')
-            ->orderBy('l.createdAt', 'DESC')
-            ->addOrderBy('l.id', 'DESC');
+            ->orderBy('l.createdAt', \SortDirection::Descending)
+            ->addOrderBy('l.id', \SortDirection::Descending);
 
         if ($onlyOwn || !$user->isAdmin()) {
             $qb->andWhere('l.owner = :owner')->setParameter('owner', $user);

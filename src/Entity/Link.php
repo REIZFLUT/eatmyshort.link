@@ -70,7 +70,7 @@ class Link
 
     /** @var Collection<int, LinkLocalisation> */
     #[ORM\OneToMany(targetEntity: LinkLocalisation::class, mappedBy: 'link', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[ORM\OrderBy(['language' => 'ASC'])]
+    #[ORM\OrderBy(['language' => \SortDirection::Ascending])]
     #[Assert\Valid]
     private Collection $localisations;
 
