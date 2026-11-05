@@ -87,6 +87,21 @@ final class PagesTest extends AppTestCase
         self::assertArrayHasKey('challenge', $request);
     }
 
+    public function testFaviconFollowsTheAccentColour(): void
+    {
+        $this->client->request('GET', '/branding/favicon.svg');
+        self::assertResponseHeaderSame('Content-Type', 'image/svg+xml');
+        $svg = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('fill="#fed90f"', $svg, 'Simpsons yellow by default');
+        self::assertStringContainsString('fill="'.\App\Branding\AccentPalette::DARK_INK.'"', $svg);
+
+        static::getContainer()->get(\App\Settings\Settings::class)->save([\App\Settings\Settings::ACCENT => '#660099']);
+        $this->client->request('GET', '/branding/favicon.svg');
+        $svg = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('fill="#660099"', $svg);
+        self::assertStringContainsString('fill="#ffffff"', $svg, 'white mouth on a dark accent');
+    }
+
     public function testThemeCssDerivesReadableColoursFromLightAccent(): void
     {
         static::getContainer()->get(\App\Settings\Settings::class)->save([\App\Settings\Settings::ACCENT => '#ffff00']);

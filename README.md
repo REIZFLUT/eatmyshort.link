@@ -18,7 +18,9 @@ Gebaut auf einem schlanken Symfony-8-Kern mit SQLite, ohne Node-Build und ohne H
   2FA-Pflicht für Admins einschaltbar.
 - QR-Codes (SVG/PNG), CSV-Export, Ablaufdatum, Aktiv-Schalter, 301/302/307/308.
 - **REST-API** mit persönlichen Tokens ([docs/API.md](docs/API.md)).
-- Oberfläche auf Deutsch und Englisch, hell/dunkel, mobil nutzbar, eigenes Logo und Akzentfarbe.
+- Oberfläche auf Deutsch und Englisch, hell/dunkel, mobil nutzbar, eigenes Logo und Akzentfarbe
+  (Standard: Simpsons-Gelb `#fed90f`; Schrift- und Textfarben werden für Kontrast nach WCAG berechnet,
+  das Favicon übernimmt die Farbe).
 
 ## Installation
 

@@ -6,8 +6,8 @@
  */
 
 :root {
-    --accent: #660099;
-    --accent-ink: #ffffff;
+    --accent: #fed90f;
+    --accent-ink: #1d1b22;
     --bg: #f6f6f8;
     --surface: #ffffff;
     --surface-2: #f1f0f4;
@@ -22,7 +22,7 @@
     --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
     --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
-    --accent-text: color-mix(in srgb, var(--accent) 85%, var(--text));
+    --accent-text: #7f6d08;
     color-scheme: light dark;
 }
 
@@ -39,7 +39,7 @@
         --warning: #f0b44c;
         --shadow: 0 1px 2px rgb(0 0 0 / 30%);
         --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
-        --accent-text: color-mix(in srgb, var(--accent) 45%, white);
+        --accent-text: #fed90f;
     }
 }
 
@@ -91,6 +91,7 @@ main { flex: 1; padding: 28px 0 56px; }
 .brand img { height: 30px; width: auto; }
 .logo { height: 22px; width: auto; display: block; }
 .logo-mark { fill: var(--accent); }
+.logo-mouth { fill: var(--accent-ink); }
 .logo-word { fill: currentColor; }
 .brand-title { font-weight: 650; }
 

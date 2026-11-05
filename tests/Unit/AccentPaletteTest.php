@@ -17,7 +17,16 @@ final class AccentPaletteTest extends TestCase
         self::assertEqualsWithDelta(4.48, AccentPalette::contrast('#777777', '#ffffff'), 0.01);
     }
 
-    public function testDefaultPurpleKeepsWhiteInk(): void
+    public function testDefaultSimpsonsYellowGetsDarkInk(): void
+    {
+        $palette = AccentPalette::fromHex((string) \App\Settings\Settings::DEFAULTS[\App\Settings\Settings::ACCENT]);
+
+        self::assertSame('#fed90f', $palette->accent);
+        self::assertSame(AccentPalette::DARK_INK, $palette->ink);
+        self::assertSame('#fed90f', $palette->textOnDark);
+    }
+
+    public function testPurpleKeepsWhiteInk(): void
     {
         $palette = AccentPalette::fromHex('#660099');
 

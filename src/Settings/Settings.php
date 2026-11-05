@@ -27,7 +27,8 @@ final class Settings implements ResetInterface
 
     public const array DEFAULTS = [
         self::TITLE => 'EatMyShort.Link',
-        self::ACCENT => '#660099',
+        // Simpsons yellow – a nod to the name, like the program itself.
+        self::ACCENT => '#fed90f',
         self::LOGO => null,
         self::REQUIRE_2FA_ADMINS => '0',
         self::CODE_LENGTH => '6',

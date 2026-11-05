@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Branding\AccentPalette;
 use App\Settings\Settings;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,6 +29,21 @@ final class BrandingController extends AbstractController
         );
         $response = new Response($css, Response::HTTP_OK, ['Content-Type' => 'text/css; charset=utf-8']);
         $response->setEtag(md5($css));
+        $response->setPublic();
+        $response->headers->addCacheControlDirective('no-cache');
+        $response->isNotModified($request);
+
+        return $response;
+    }
+
+    /** The logo mark in the accent colour, with the "mouth" in the matching contrast colour. */
+    #[Route('/branding/favicon.svg', name: 'app_branding_favicon', methods: ['GET'])]
+    public function favicon(Request $request, Settings $settings): Response
+    {
+        $palette = $settings->getAccentPalette();
+        $response = $this->render('branding/favicon.svg.twig', ['accent' => $palette->accent, 'ink' => $palette->ink]);
+        $response->headers->set('Content-Type', 'image/svg+xml');
+        $response->setEtag(md5((string) $response->getContent()));
         $response->setPublic();
         $response->headers->addCacheControlDirective('no-cache');
         $response->isNotModified($request);

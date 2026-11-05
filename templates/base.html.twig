@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>{% block title %}{% endblock %}{% if block('title') is not empty %} · {% endif %}{{ app_title() }}</title>
-    <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ path('app_branding_favicon') }}" type="image/svg+xml">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     <link rel="stylesheet" href="{{ path('app_branding_css') }}">
