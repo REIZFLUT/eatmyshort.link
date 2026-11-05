@@ -56,6 +56,7 @@ security:
                     enabled: false
 
     access_control:
+        - { path: ^/healthz, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/(reset|invite)(/|$), roles: PUBLIC_ACCESS }
         - { path: ^/branding/, roles: PUBLIC_ACCESS }

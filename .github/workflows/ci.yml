@@ -7,17 +7,31 @@ on:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    env:
+      # The app refuses to boot in prod without a real secret (Kernel + AppSecretCheck).
+      # This value only exists inside the CI job and is never used in production.
+      APP_SECRET: 'ci-only-secret-0123456789abcdef0123456789abcdef'
     steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # 2.36.0
         with:
           php-version: '8.4'
           extensions: intl, pdo_sqlite, sodium, gd
           coverage: none
+      # Not a published package: the publish metadata checks (name/description) do not apply,
+      # schema and lock-file consistency are still validated strictly.
+      - run: composer validate --strict --no-check-publish
       - run: composer install --no-interaction --no-progress
+      - run: composer audit --locked
       - run: php bin/console cache:warmup --env=dev
+      - run: php bin/console lint:twig templates/
+      - run: php bin/console lint:yaml config/
+      - run: php bin/console lint:container
+      - run: php bin/console doctrine:schema:validate --skip-sync
       - run: vendor/bin/phpunit
       - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
       - run: vendor/bin/php-cs-fixer fix --dry-run --diff
         env:
           PHP_CS_FIXER_IGNORE_ENV: 1
+      # Compiling the prod container catches env/parameter mistakes the dev cache hides.
+      - run: php bin/console cache:warmup --env=prod
