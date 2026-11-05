@@ -1,0 +1,118 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'import.title'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'import.title'|trans }}</h1>
+            <p class="sub">{{ 'import.intro'|trans }}</p>
+        </div>
+        <a class="btn btn-ghost" href="{{ path('app_admin_users') }}">← {{ 'nav.users'|trans }}</a>
+    </div>
+
+    <form method="post" action="{{ path('app_admin_import') }}" enctype="multipart/form-data">
+        <input type="hidden" name="_token" value="{{ csrf_token('admin-import') }}">
+        <div class="card">
+            <div class="field">
+                <label for="file">{{ 'import.file'|trans }}</label>
+                <input type="file" id="file" name="file" accept=".csv,.txt,text/csv,text/plain" required>
+                <p class="help">{{ 'import.file_help'|trans({'%size%': (max_bytes / 1048576)|round, '%rows%': max_rows}) }}</p>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label for="owner">{{ 'import.owner'|trans }}</label>
+                    <select id="owner" name="owner">
+                        {% for user in users %}
+                            <option value="{{ user.id }}" {{ user.id == owner.id ? 'selected' }}>{{ user.displayName }} ({{ user.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="domain">{{ 'import.domain'|trans }}</label>
+                    <select id="domain" name="domain">
+                        {% for d in domains %}
+                            <option value="{{ d.id }}" {{ domain and d.id == domain.id ? 'selected' }}>{{ d.displayName }}{{ d.isDefault ? ' (' ~ 'domain.default'|trans ~ ')' }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if domains is empty %}<p class="help">{{ 'import.error.no_domain'|trans }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="skip_duplicates">
+                    <input type="checkbox" id="skip_duplicates" name="skip_duplicates" value="1" {{ skip_duplicates ? 'checked' }}>
+                    {{ 'import.skip_duplicates'|trans }}
+                </label>
+                <p class="help">{{ 'import.skip_duplicates_help'|trans }}</p>
+            </div>
+
+            <p class="help">{{ 'import.help_columns'|trans }}<br>{{ 'import.help_delimiter'|trans }}</p>
+
+            <div class="form-actions">
+                <button class="btn" name="action" value="preview">{{ 'import.preview'|trans }}</button>
+                {% if result %}
+                    <button class="btn btn-primary" name="action" value="import">{{ 'import.run'|trans }}</button>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% if result %}
+        <div class="card">
+            <div class="card-head">
+                <h2>{{ imported ? 'import.run'|trans : 'import.preview'|trans }}</h2>
+            </div>
+
+            <p class="small muted">
+                {{ 'import.columns'|trans }}
+                <span class="import-columns">{{ result.columns|join(', ') ?: 'import.no_columns'|trans }}</span>
+                · {{ 'import.rows_total'|trans({'%n%': result.total}) }}
+            </p>
+
+            <p class="import-summary">
+                <span class="badge badge-success">{{ 'import.summary.valid'|trans({'%n%': result.valid}) }}</span>
+                <span class="badge badge-danger">{{ 'import.summary.invalid'|trans({'%n%': result.invalid}) }}</span>
+                <span class="badge badge-warning">{{ 'import.summary.duplicates'|trans({'%n%': result.duplicates}) }}</span>
+            </p>
+
+            {% if imported %}
+                <p class="import-result">
+                    <span class="badge badge-success">{{ 'import.result.created'|trans({'%n%': result.created}) }}</span>
+                    <span class="badge">{{ 'import.result.skipped'|trans({'%n%': result.skipped}) }}</span>
+                    <span class="badge badge-danger">{{ 'import.result.invalid'|trans({'%n%': result.invalid}) }}</span>
+                </p>
+            {% else %}
+                <p class="small muted">{{ 'import.preview_hint'|trans }}</p>
+            {% endif %}
+
+            {% if result.rows is not empty %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">{{ 'import.line'|trans }}</th>
+                                <th>{{ 'import.col.code'|trans }}</th>
+                                <th>{{ 'import.col.target'|trans }}</th>
+                                <th>{{ 'import.col.status'|trans }}</th>
+                                <th>{{ 'import.col.note'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in result.rows %}
+                                <tr data-line="{{ row.line }}" class="row-{{ row.status.value }}">
+                                    <td class="num">{{ row.line }}</td>
+                                    <td><code>{{ row.code ?: '–' }}</code></td>
+                                    <td class="small truncate" title="{{ row.targetUrl }}">{{ row.targetUrl }}</td>
+                                    <td><span class="badge {{ row.status.value == 'ok' ? 'badge-success' : (row.status.value == 'duplicate' ? 'badge-warning' : 'badge-danger') }}">{{ ('import.status.' ~ row.status.value)|trans }}</span></td>
+                                    <td class="small muted">{{ row.errors|join('; ') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

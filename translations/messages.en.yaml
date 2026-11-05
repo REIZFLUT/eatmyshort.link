@@ -253,6 +253,49 @@ user.domains_help: The user may create links on these domains. Admins may always
 user.locale: Language
 user.locale_browser: like browser
 
+import.title: CSV import
+import.intro: 'Import short links from a CSV file – e.g. a YOURLS export or an Excel list. The header row defines the columns.'
+import.file: CSV file
+import.file_help: 'Comma or semicolon separated, UTF-8 (BOM allowed), at most %size% MB and %rows% rows.'
+import.owner: Target owner
+import.domain: Domain
+import.skip_duplicates: Skip duplicates
+import.skip_duplicates_help: 'Rows whose code already exists on the domain are skipped and counted instead of reported as errors.'
+import.help_columns: 'Recognised columns: code/keyword/kürzel, target_url/url/ziel/long_url, title/titel, domain, redirect_type/redirect, active/aktiv, expires_at/ablauf. The clicks/klicks column is ignored.'
+import.help_delimiter: 'The delimiter (comma or semicolon) is detected from the header row.'
+import.preview: Preview
+import.run: Import
+import.columns: 'Detected columns:'
+import.no_columns: none
+import.rows_total: 'Rows in total: %n%'
+import.summary.valid: 'Valid: %n%'
+import.summary.invalid: 'Invalid: %n%'
+import.summary.duplicates: 'Duplicates: %n%'
+import.result.created: 'Created: %n%'
+import.result.skipped: 'Skipped: %n%'
+import.result.invalid: 'Errors: %n%'
+import.preview_hint: 'Nothing has been saved yet. To apply it, choose the file again and press “Import”.'
+import.line: Line
+import.col.code: Code
+import.col.target: Target
+import.col.status: Status
+import.col.note: Note
+import.status.ok: ok
+import.status.error: error
+import.status.duplicate: duplicate
+import.error.no_file: Please choose a CSV file.
+import.error.size: 'The file is too large (5 MB maximum).'
+import.error.type: 'Only CSV or TXT files are allowed.'
+import.error.no_header: 'The file has no header row with known columns.'
+import.error.missing_target: 'The required target-URL column is missing (target_url, url, ziel or long_url).'
+import.error.too_many_rows: 'The file has more than 5000 rows. Please split it into smaller files.'
+import.error.no_domain: 'No domain is assigned to the selected owner.'
+import.error.domain_unknown: 'Domain “%domain%” is not configured.'
+import.error.domain_inactive: 'Domain “%domain%” is inactive.'
+import.error.domain_not_allowed: 'Domain “%domain%” is not assigned to this owner.'
+import.error.bad_date: 'Invalid expiry date “%value%” (expected ISO 8601 or d.m.Y).'
+import.error.duplicate_code: 'This code already exists on the domain.'
+
 domains.intro: Hostnames that serve short links. Every domain and subdomain is added on its own.
 domains.new: Add domain
 domains.empty_title: No domain yet
@@ -338,6 +381,7 @@ flash.account_link_not_sent: The e-mail could not be sent. Please pass on the li
 flash.domain_deleted: Domain deleted.
 flash.domain_has_links: There are still links on this domain. Delete or move them first – or deactivate the domain.
 flash.domain_saved: Domain saved.
+flash.import_done: Import complete.
 flash.invite_done: Password saved. You can sign in now.
 flash.reset_done: New password saved.
 flash.reset_sent: If the address is known, a link is on its way.

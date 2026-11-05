@@ -8,9 +8,11 @@
             <h1>{{ 'nav.users'|trans }}</h1>
             <p class="sub">{{ 'users.intro'|trans }}</p>
         </div>
-        <a class="btn btn-primary" href="{{ path('app_admin_user_new') }}">{{ 'users.new'|trans }}</a>
+        <div class="actions">
+            <a class="btn" href="{{ path('app_admin_import') }}">{{ 'import.title'|trans }}</a>
+            <a class="btn btn-primary" href="{{ path('app_admin_user_new') }}">{{ 'users.new'|trans }}</a>
+        </div>
     </div>
-
     <div class="card flush">
         <div class="table-wrap">
             <table>
