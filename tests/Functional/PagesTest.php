@@ -87,6 +87,17 @@ final class PagesTest extends AppTestCase
         self::assertArrayHasKey('challenge', $request);
     }
 
+    public function testThemeCssDerivesReadableColoursFromLightAccent(): void
+    {
+        static::getContainer()->get(\App\Settings\Settings::class)->save([\App\Settings\Settings::ACCENT => '#ffff00']);
+
+        $this->client->request('GET', '/branding/theme.css');
+        $css = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('--accent:#ffff00;', $css);
+        self::assertStringContainsString('--accent-ink:'.\App\Branding\AccentPalette::DARK_INK.';', $css);
+        self::assertStringNotContainsString('--accent-text:#ffff00;}'."\n@media", $css, 'yellow is not used as text on light surfaces');
+    }
+
     public function testRequireTwoFactorForAdminsRedirectsToSecurityPage(): void
     {
         $admin = $this->createUser('root@example.com', admin: true);

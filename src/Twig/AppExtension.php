@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Twig;
 
+use App\Branding\AccentPalette;
 use App\Domain\HostRegistry;
 use App\Entity\User;
 use App\EventListener\SecurityHeadersListener;
@@ -55,6 +56,13 @@ final readonly class AppExtension
     public function appTitle(): string
     {
         return $this->settings->getString(Settings::TITLE);
+    }
+
+    /** For e-mails, which can't use the CSS tokens: accent background and the text colour for it. */
+    #[AsTwigFunction('accent_palette')]
+    public function accentPalette(): AccentPalette
+    {
+        return $this->settings->getAccentPalette();
     }
 
     #[AsTwigFunction('has_custom_logo')]

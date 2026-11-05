@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings;
 
+use App\Branding\AccentPalette;
 use App\Entity\Setting;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
@@ -66,6 +67,16 @@ final class Settings implements ResetInterface
     public function getBool(string $key): bool
     {
         return '1' === $this->get($key);
+    }
+
+    /** Accent colour plus the readable colours derived from it; falls back to the default accent. */
+    public function getAccentPalette(): AccentPalette
+    {
+        try {
+            return AccentPalette::fromHex($this->getString(self::ACCENT));
+        } catch (\InvalidArgumentException) {
+            return AccentPalette::fromHex((string) self::DEFAULTS[self::ACCENT]);
+        }
     }
 
     /** @param array<string, string|int|bool|null> $values */

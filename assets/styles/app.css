@@ -1,6 +1,8 @@
 /*
  * EatMyShort.Link – one stylesheet, no build step.
- * --accent is set by /branding/theme.css (admin setting); the value here is the fallback.
+ * /branding/theme.css sets --accent (admin setting) and the colours derived from it with
+ * WCAG contrast (App\Branding\AccentPalette): --accent-ink for text on the accent and
+ * --accent-text for the accent as text colour per theme. The values here are fallbacks.
  */
 
 :root {
@@ -161,11 +163,12 @@ main { flex: 1; padding: 28px 0 56px; }
 }
 .btn:hover { background: var(--surface-2); text-decoration: none; }
 .btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-text);
     outline-offset: 2px;
 }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn-primary:hover { background: var(--accent); filter: brightness(1.12); }
+/* Hover moves towards the ink colour: lighter for dark accents, darker for light ones. */
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 86%, var(--accent-ink)); border-color: color-mix(in srgb, var(--accent) 86%, var(--accent-ink)); }
 .btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
 .btn-danger:hover { background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
 .btn-ghost { border-color: transparent; background: transparent; color: var(--muted); }

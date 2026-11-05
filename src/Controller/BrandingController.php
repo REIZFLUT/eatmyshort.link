@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Branding\AccentPalette;
 use App\Settings\Settings;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,12 +20,16 @@ final class BrandingController extends AbstractController
     #[Route('/branding/theme.css', name: 'app_branding_css', methods: ['GET'])]
     public function css(Request $request, Settings $settings): Response
     {
-        $accent = $settings->getString(Settings::ACCENT);
-        if (1 !== preg_match('/^#[0-9a-f]{6}$/i', $accent)) {
-            $accent = (string) Settings::DEFAULTS[Settings::ACCENT];
-        }
-        $response = new Response(":root{--accent:$accent;}\n", Response::HTTP_OK, ['Content-Type' => 'text/css; charset=utf-8']);
-        $response->setEtag(md5($accent));
+        $palette = $settings->getAccentPalette();
+        $css = \sprintf(
+            ":root{--accent:%s;--accent-ink:%s;--accent-text:%s;}\n@media (prefers-color-scheme: dark){:root{--accent-text:%s;}}\n",
+            $palette->accent,
+            $palette->ink,
+            $palette->textOnLight,
+            $palette->textOnDark,
+        );
+        $response = new Response($css, Response::HTTP_OK, ['Content-Type' => 'text/css; charset=utf-8']);
+        $response->setEtag(md5($css));
         $response->setPublic();
         $response->headers->addCacheControlDirective('no-cache');
         $response->isNotModified($request);
