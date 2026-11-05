@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'tools.bookmarklet.title'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head"><h1>{{ 'tools.bookmarklet.title'|trans }}</h1></div>
+
+        <div class="stack">
+            <section class="card">
+                <p>{{ 'tools.bookmarklet.intro'|trans }}</p>
+                <p class="small muted">{{ 'tools.bookmarklet.privacy'|trans({'%host%': app.request.host}) }}</p>
+                <p class="small muted">{{ 'tools.bookmarklet.drag_hint'|trans }}</p>
+            </section>
+
+            <section class="card">
+                <h2>{{ 'tools.bookmarklet.choose'|trans }}</h2>
+                <ul class="bookmarklets">
+                    <li>
+                        <a class="btn btn-primary" href="{{ bookmarklets.standard }}">{{ 'tools.bookmarklet.standard'|trans }}</a>
+                        <p class="small muted">{{ 'tools.bookmarklet.standard_help'|trans }}</p>
+                    </li>
+                    <li>
+                        <a class="btn" href="{{ bookmarklets.instant }}">{{ 'tools.bookmarklet.instant'|trans }}</a>
+                        <p class="small muted">{{ 'tools.bookmarklet.instant_help'|trans }}</p>
+                    </li>
+                    <li>
+                        <a class="btn" href="{{ bookmarklets.custom }}">{{ 'tools.bookmarklet.custom'|trans }}</a>
+                        <p class="small muted">{{ 'tools.bookmarklet.custom_help'|trans }}</p>
+                    </li>
+                    <li>
+                        <a class="btn" href="{{ bookmarklets.goto }}">{{ 'tools.bookmarklet.goto'|trans }}</a>
+                        <p class="small muted">{{ 'tools.bookmarklet.goto_help'|trans }}</p>
+                    </li>
+                </ul>
+            </section>
+        </div>
+    </div>
+{% endblock %}

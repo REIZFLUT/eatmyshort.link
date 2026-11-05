@@ -27,6 +27,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route('/links')]
 final class LinkController extends AbstractController
@@ -81,12 +82,97 @@ final class LinkController extends AbstractController
         $link->setDomain($usable[0]);
         $this->manager->applyDefaults($link);
 
+        // The bookmarklet and the popup flow hand over the target and title as query
+        // parameters. Only take them over for the GET render and only when they look
+        // plausible; a POST must keep using whatever the (validated) form carries.
+        if ($request->isMethod('GET')) {
+            $target = self::plausibleUrl($request->query->get('url'));
+            if (null !== $target) {
+                $link->setTargetUrl($target);
+            }
+            $title = self::plausibleTitle($request->query->get('title'));
+            if (null !== $title) {
+                $link->setTitle($title);
+            }
+        }
+
         // The dashboard quick form only posts target, domain and code; a full form would
         // read the missing "active" checkbox as unchecked.
         $full = !$request->isMethod('POST') || \array_key_exists('redirectType', $request->request->all('link'));
         $form = $this->createForm(LinkType::class, $link, ['domains' => $usable, 'full' => $full]);
 
         return $this->handleForm($request, $form, $link, 'link/new.html.twig', 'flash.link_created');
+    }
+
+    /**
+     * Confirmation card of the bookmarklet popup flow. Rendering a form here - never
+     * creating a link from a GET - keeps the flow CSRF-protected.
+     */
+    #[Route('/quick', name: 'app_link_quick', methods: ['GET'])]
+    public function quick(Request $request, #[CurrentUser] User $user): Response
+    {
+        return $this->render('link/quick.html.twig', [
+            'url' => self::plausibleUrl($request->query->get('url')),
+            'title' => self::plausibleTitle($request->query->get('title')),
+            'code' => self::plausibleCode($request->query->get('code')),
+            'goto' => $request->query->getBoolean('goto'),
+            'domain' => $this->domains->findUsableBy($user, $this->adminAccess->isAdmin($user))[0] ?? null,
+        ]);
+    }
+
+    #[Route('/quick', name: 'app_link_quick_create', methods: ['POST'])]
+    public function quickCreate(Request $request, #[CurrentUser] User $user, TranslatorInterface $translator): Response
+    {
+        if (!$this->isCsrfTokenValid('link-quick', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $usable = $this->domains->findUsableBy($user, $this->adminAccess->isAdmin($user));
+        if ([] === $usable) {
+            $this->addFlash('warning', 'flash.no_domains');
+
+            return $this->redirectToRoute('app_dashboard');
+        }
+
+        $url = self::plausibleUrl($request->request->get('url'));
+        $rawCode = $request->request->get('code');
+        $code = \is_string($rawCode) ? trim($rawCode) : '';
+        $goto = $request->request->getBoolean('goto');
+
+        // This flow always uses the user's default (first usable) domain - no domain parameter.
+        $link = new Link($user);
+        $link->setDomain($usable[0]);
+        if (null !== $url) {
+            $link->setTargetUrl($url);
+        }
+        if ('' !== $code) {
+            $link->setCode($code);
+        }
+        $this->manager->applyDefaults($link);
+
+        $violations = $this->manager->validate($link);
+        if (0 === \count($violations)) {
+            $this->manager->save($link);
+            $this->addFlash('success', $translator->trans('flash.link_quick_created', ['%url%' => $link->getShortUrl()]));
+
+            return $goto
+                ? $this->redirect($link->getTargetUrl())
+                : $this->redirectToRoute('app_link_show', ['id' => $link->getId()]);
+        }
+
+        $messages = [];
+        foreach ($violations as $violation) {
+            $messages[] = $violation->getMessage();
+        }
+
+        return $this->render('link/quick.html.twig', [
+            'url' => $url,
+            'title' => self::plausibleTitle($request->request->get('title')),
+            'code' => $code,
+            'goto' => $goto,
+            'domain' => $usable[0],
+            'violations' => $messages,
+        ], new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
     }
 
     #[Route('/{id}', name: 'app_link_show', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
@@ -179,6 +265,48 @@ final class LinkController extends AbstractController
         ));
 
         return $response;
+    }
+
+    /**
+     * Only http(s) URLs up to 2000 characters are taken over; anything else (javascript:,
+     * data:, a missing scheme, ...) is dropped instead of being reflected into the form.
+     */
+    private static function plausibleUrl(mixed $value): ?string
+    {
+        if (!\is_string($value)) {
+            return null;
+        }
+        $value = trim($value);
+        if ('' === $value || \strlen($value) > 2000) {
+            return null;
+        }
+        $scheme = strtolower((string) parse_url($value, \PHP_URL_SCHEME));
+
+        return \in_array($scheme, ['http', 'https'], true) ? $value : null;
+    }
+
+    private static function plausibleTitle(mixed $value): ?string
+    {
+        if (!\is_string($value)) {
+            return null;
+        }
+        $value = trim($value);
+        if ('' === $value || mb_strlen($value) > 255) {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /** Only prefill a code that already matches the format the server will accept. */
+    private static function plausibleCode(mixed $value): string
+    {
+        if (!\is_string($value)) {
+            return '';
+        }
+        $value = trim($value);
+
+        return 1 === preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/', $value) ? $value : '';
     }
 
     /** @param FormInterface<Link> $form */
