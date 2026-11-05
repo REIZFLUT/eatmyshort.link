@@ -25,26 +25,31 @@
 
         <div class="card">
             <h2>{{ 'api.new_token'|trans }}</h2>
-            <form method="post" class="form-row">
-                <div class="field">
-                    <label for="token-name">{{ 'api.token_name'|trans }}</label>
-                    <input type="text" id="token-name" name="name" maxlength="100" placeholder="{{ 'api.token_name_placeholder'|trans }}" required>
-                </div>
-                <div class="field">
-                    <label for="token-days">{{ 'api.token_expires'|trans }}</label>
-                    <select id="token-days" name="days">
-                        <option value="0">{{ 'api.never'|trans }}</option>
-                        {% for days in [30, 90, 365] %}
-                            <option value="{{ days }}">{{ 'stats.period_days'|trans({'%days%': days}) }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="field">
-                    <span class="label">&nbsp;</span>
-                    <input type="hidden" name="_token" value="{{ csrf_token('api-token-create') }}">
-                    <button class="btn btn-primary">{{ 'api.create'|trans }}</button>
-                </div>
-            </form>
+            {% if sensitive_confirmed %}
+                <form method="post" action="{{ path('app_profile_tokens') }}" class="form-row">
+                    <div class="field">
+                        <label for="token-name">{{ 'api.token_name'|trans }}</label>
+                        <input type="text" id="token-name" name="name" maxlength="100" placeholder="{{ 'api.token_name_placeholder'|trans }}" required>
+                    </div>
+                    <div class="field">
+                        <label for="token-days">{{ 'api.token_expires'|trans }}</label>
+                        <select id="token-days" name="days">
+                            <option value="0">{{ 'api.never'|trans }}</option>
+                            {% for days in [30, 90, 365] %}
+                                <option value="{{ days }}">{{ 'stats.period_days'|trans({'%days%': days}) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <span class="label">&nbsp;</span>
+                        <input type="hidden" name="_token" value="{{ csrf_token('api-token-create') }}">
+                        <button class="btn btn-primary">{{ 'api.create'|trans }}</button>
+                    </div>
+                </form>
+            {% else %}
+                <p class="muted small">{{ 'profile.confirm_needed'|trans }}</p>
+                {{ include('profile/_confirm_form.html.twig', {target: 'tokens'}) }}
+            {% endif %}
         </div>
 
         <div class="card flush">

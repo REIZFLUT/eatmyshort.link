@@ -62,6 +62,8 @@ final class InfrastructureTest extends KernelTestCase
             $tester->assertCommandIsSuccessful();
             $copy = new \PDO('sqlite:'.$target);
             self::assertNotFalse($copy->query('SELECT COUNT(*) FROM link'));
+            clearstatcache(true, $target);
+            self::assertSame(0o600, fileperms($target) & 0o777, 'the copy contains secrets: owner read/write only');
         } finally {
             if (is_file($target)) {
                 unlink($target);

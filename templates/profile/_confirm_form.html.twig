@@ -1,0 +1,25 @@
+{# Re-authentication form for sensitive profile actions. Expects "target" ("security" or "tokens"). #}
+{% if app.user.hasPassword or app.user.totpAuthenticationEnabled %}
+    <form method="post" action="{{ path('app_profile_confirm') }}" class="form-row">
+        <input type="hidden" name="target" value="{{ target }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('profile-confirm') }}">
+        {% if app.user.hasPassword %}
+            <div class="field">
+                <label for="confirm-password">{{ 'profile.confirm_password'|trans }}</label>
+                <input type="password" id="confirm-password" name="password" autocomplete="current-password" required>
+            </div>
+        {% else %}
+            <div class="field">
+                <label for="confirm-code">{{ 'totp.code'|trans }}</label>
+                <input type="text" id="confirm-code" name="code" inputmode="numeric" autocomplete="one-time-code" required>
+            </div>
+        {% endif %}
+        <div class="field">
+            <span class="label">&nbsp;</span>
+            <button class="btn btn-primary">{{ 'profile.confirm_button'|trans }}</button>
+        </div>
+    </form>
+{% else %}
+    <p class="muted small">{{ 'profile.confirm_no_factor'|trans }}</p>
+    <p><a class="btn" href="{{ path('app_profile') }}">{{ 'profile.set_password'|trans }}</a></p>
+{% endif %}

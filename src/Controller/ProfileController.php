@@ -12,7 +12,9 @@ use App\Form\ProfileType;
 use App\Qr\QrCodeRenderer;
 use App\Repository\ApiTokenRepository;
 use App\Repository\WebauthnCredentialRepository;
+use App\Security\BackupCodeGenerator;
 use App\Security\SecretBox;
+use App\Security\SensitiveConfirmation;
 use Doctrine\ORM\EntityManagerInterface;
 use Scheb\TwoFactorBundle\Model\Totp\TotpConfiguration;
 use Scheb\TwoFactorBundle\Model\Totp\TotpConfigurationInterface;
@@ -68,12 +70,59 @@ final class ProfileController extends AbstractController
     }
 
     #[Route('/security', name: 'app_profile_security', methods: ['GET'])]
-    public function security(Request $request, #[CurrentUser] User $user): Response
+    public function security(Request $request, #[CurrentUser] User $user, SensitiveConfirmation $confirmation): Response
     {
         return $this->render('profile/security.html.twig', [
             'passkeys' => $this->credentials->findByUser($user),
             'backup_codes' => $request->getSession()->remove(self::BACKUP_CODES_SESSION_KEY),
+            'sensitive_confirmed' => $confirmation->isConfirmed($request->getSession()),
         ]);
+    }
+
+    /**
+     * Re-authentication in front of sensitive profile actions: the password for users
+     * that have one, otherwise a TOTP code. Opens a five minute window.
+     */
+    #[Route('/confirm', name: 'app_profile_confirm', methods: ['GET', 'POST'])]
+    public function confirm(
+        Request $request,
+        #[CurrentUser] User $user,
+        UserPasswordHasherInterface $hasher,
+        TotpAuthenticatorInterface $totp,
+        SensitiveConfirmation $confirmation,
+    ): Response {
+        // Whitelisted targets only: no open redirect through the query string.
+        $requested = $request->isMethod('POST') ? $request->request->get('target') : $request->query->get('target');
+        $target = 'tokens' === $requested ? 'tokens' : 'security';
+        // Passkey-only accounts without TOTP have nothing to verify against; they have to
+        // set a password (or enable TOTP) first, otherwise the window would be free.
+        $canConfirm = $user->hasPassword() || $user->isTotpAuthenticationEnabled();
+
+        $error = null;
+        if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('profile-confirm', (string) $request->request->get('_token'))) {
+                throw $this->createAccessDeniedException();
+            }
+            if (!$canConfirm) {
+                throw $this->createAccessDeniedException('This account has no credential to confirm with.');
+            }
+            $verified = $user->hasPassword()
+                ? $hasher->isPasswordValid($user, (string) $request->request->get('password'))
+                : $totp->checkCode($user, preg_replace('/\D/', '', (string) $request->request->get('code')) ?? '');
+
+            if ($verified) {
+                $confirmation->confirm($request->getSession());
+                $this->addFlash('success', 'flash.sensitive_confirmed');
+
+                return $this->redirectToRoute($this->routeForTarget($target));
+            }
+            $error = 'profile.confirm_failed';
+        }
+
+        return $this->render('profile/confirm.html.twig', [
+            'target' => $target,
+            'error' => $error,
+        ], new Response(status: null === $error ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY));
     }
 
     #[Route('/totp', name: 'app_profile_totp_setup', methods: ['GET', 'POST'])]
@@ -219,7 +268,7 @@ final class ProfileController extends AbstractController
     }
 
     #[Route('/tokens', name: 'app_profile_tokens', methods: ['GET', 'POST'])]
-    public function tokens(Request $request, #[CurrentUser] User $user, ApiTokenRepository $tokens): Response
+    public function tokens(Request $request, #[CurrentUser] User $user, ApiTokenRepository $tokens, SensitiveConfirmation $confirmation): Response
     {
         $plain = null;
         if ($request->isMethod('POST')) {
@@ -240,6 +289,7 @@ final class ProfileController extends AbstractController
         return $this->render('profile/tokens.html.twig', [
             'tokens' => $tokens->findByUser($user),
             'plain_token' => $plain,
+            'sensitive_confirmed' => $confirmation->isConfirmed($request->getSession()),
         ]);
     }
 
@@ -256,16 +306,15 @@ final class ProfileController extends AbstractController
         return $this->redirectToRoute('app_profile_tokens');
     }
 
-    /** @return list<string> 10 codes like "k7m2-9qpx" */
+    /** @return list<string> 10 codes like "k7m2-9qpx-t3vw" */
     private static function generateBackupCodes(): array
     {
-        $codes = [];
-        for ($i = 0; $i < 10; ++$i) {
-            $raw = bin2hex(random_bytes(4));
-            $codes[] = substr($raw, 0, 4).'-'.substr($raw, 4, 4);
-        }
+        return BackupCodeGenerator::generate();
+    }
 
-        return $codes;
+    private function routeForTarget(string $target): string
+    {
+        return 'tokens' === $target ? 'app_profile_tokens' : 'app_profile_security';
     }
 
     private function assertOwnCredential(Request $request, WebauthnCredential $credential, User $user, string $csrfPrefix): void
