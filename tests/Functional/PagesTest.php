@@ -72,6 +72,12 @@ final class PagesTest extends AppTestCase
         $user = $this->createUser('ada@example.com');
         $this->client->loginUser($user);
 
+        // Sensitive actions need a fresh confirmation first (see ProfileSecurityTest).
+        $this->client->request('GET', '/profile/security');
+        $session = $this->client->getRequest()->getSession();
+        $session->set('_sensitive_confirmed_at', time());
+        $session->save();
+
         $this->client->request('POST', '/profile/passkeys/options', server: ['CONTENT_TYPE' => 'application/json'], content: '{}');
         self::assertResponseIsSuccessful();
         $options = json_decode((string) $this->client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);

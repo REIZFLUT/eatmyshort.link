@@ -12,6 +12,14 @@
     </div>
 
     <div class="stack">
+        {% if not sensitive_confirmed %}
+            <div class="card">
+                <h2>{{ 'profile.confirm_title'|trans }}</h2>
+                <p class="muted small">{{ 'profile.confirm_needed'|trans }}</p>
+                {{ include('profile/_confirm_form.html.twig', {target: 'security'}) }}
+            </div>
+        {% endif %}
+
         {% if backup_codes %}
             <div class="card">
                 <h2>{{ 'totp.backup_codes'|trans }}</h2>
@@ -26,14 +34,18 @@
         <div class="card">
             <div class="card-head">
                 <h2>{{ 'passkey.title'|trans }}</h2>
-                <button type="button" class="btn btn-primary"
-                        data-passkey="register"
-                        data-options-url="{{ path('webauthn.controller.creation.request.profile_passkey') }}"
-                        data-result-url="{{ path('webauthn.controller.creation.response.profile_passkey') }}"
-                        data-error-message="{{ 'passkey.register_failed'|trans }}"
-                        data-aborted-message="{{ 'passkey.aborted'|trans }}">
-                    + {{ 'passkey.add'|trans }}
-                </button>
+                {% if sensitive_confirmed %}
+                    <button type="button" class="btn btn-primary"
+                            data-passkey="register"
+                            data-options-url="{{ path('webauthn.controller.creation.request.profile_passkey') }}"
+                            data-result-url="{{ path('webauthn.controller.creation.response.profile_passkey') }}"
+                            data-error-message="{{ 'passkey.register_failed'|trans }}"
+                            data-aborted-message="{{ 'passkey.aborted'|trans }}">
+                        + {{ 'passkey.add'|trans }}
+                    </button>
+                {% else %}
+                    <span class="muted small">{{ 'profile.confirm_needed'|trans }}</span>
+                {% endif %}
             </div>
             <p class="muted small">{{ 'passkey.intro'|trans }}</p>
             <p id="passkey-error" class="errors" hidden></p>
@@ -58,10 +70,14 @@
                                     <td class="hide-sm small muted">{{ passkey.createdAt|date('d.m.Y') }}</td>
                                     <td class="hide-sm small muted">{{ passkey.lastUsedAt ? passkey.lastUsedAt|date('d.m.Y H:i') : '–' }}</td>
                                     <td>
-                                        <form method="post" action="{{ path('app_profile_passkey_delete', {id: passkey.id}) }}" data-confirm="{{ 'passkey.delete_confirm'|trans }}" class="inline-form">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('passkey-delete-' ~ passkey.id) }}">
-                                            <button class="btn btn-sm btn-danger">{{ 'action.delete'|trans }}</button>
-                                        </form>
+                                        {% if sensitive_confirmed %}
+                                            <form method="post" action="{{ path('app_profile_passkey_delete', {id: passkey.id}) }}" data-confirm="{{ 'passkey.delete_confirm'|trans }}" class="inline-form">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('passkey-delete-' ~ passkey.id) }}">
+                                                <button class="btn btn-sm btn-danger">{{ 'action.delete'|trans }}</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="muted small">–</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -83,16 +99,20 @@
             <p class="muted small">{{ 'totp.intro'|trans }}</p>
             {% if app.user.totpAuthenticationEnabled %}
                 <p class="small">{{ 'totp.codes_left'|trans({'%count%': app.user.countBackupCodes}) }}</p>
-                <div class="actions">
-                    <form method="post" action="{{ path('app_profile_totp_backup_codes') }}" class="inline-form" data-confirm="{{ 'totp.new_codes_confirm'|trans }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token('backup-codes') }}">
-                        <button class="btn">{{ 'totp.new_codes'|trans }}</button>
-                    </form>
-                    <form method="post" action="{{ path('app_profile_totp_disable') }}" class="inline-form" data-confirm="{{ 'totp.disable_confirm'|trans }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token('totp-disable') }}">
-                        <button class="btn btn-danger">{{ 'totp.disable'|trans }}</button>
-                    </form>
-                </div>
+                {% if sensitive_confirmed %}
+                    <div class="actions">
+                        <form method="post" action="{{ path('app_profile_totp_backup_codes') }}" class="inline-form" data-confirm="{{ 'totp.new_codes_confirm'|trans }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('backup-codes') }}">
+                            <button class="btn">{{ 'totp.new_codes'|trans }}</button>
+                        </form>
+                        <form method="post" action="{{ path('app_profile_totp_disable') }}" class="inline-form" data-confirm="{{ 'totp.disable_confirm'|trans }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('totp-disable') }}">
+                            <button class="btn btn-danger">{{ 'totp.disable'|trans }}</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p class="muted small">{{ 'profile.confirm_needed'|trans }}</p>
+                {% endif %}
             {% else %}
                 <a class="btn btn-primary" href="{{ path('app_profile_totp_setup') }}">{{ 'totp.enable'|trans }}</a>
             {% endif %}

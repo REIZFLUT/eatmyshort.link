@@ -195,6 +195,13 @@ profile.account: Account
 profile.change_password: Change password
 profile.set_password: Set a password
 profile.security_intro: Passkeys and two-factor code for your account.
+profile.confirm_title: Confirmation required
+profile.confirm_intro: Please confirm your identity to continue.
+profile.confirm_needed: For security reasons you have to confirm again for this change.
+profile.confirm_password: Password
+profile.confirm_button: Confirm
+profile.confirm_failed: The confirmation failed. Please check your input.
+profile.confirm_no_factor: This account has no password and no two-factor code to confirm with yet. Set a password first.
 
 api.intro: Personal access tokens for the REST API. A token acts with your permissions.
 api.new_token: New token
@@ -341,6 +348,7 @@ flash.passkey_last: This is your last way to sign in. Set a password or add anot
 flash.password_changed: Password changed.
 flash.password_login_passkey_only: This account has a passkey. Please sign in with your passkey – or set up a two-factor code first.
 flash.profile_saved: Profile saved.
+flash.sensitive_confirmed: Confirmed. Security changes are possible for the next 5 minutes.
 flash.settings_saved: Settings saved.
 flash.token_deleted: Token revoked.
 flash.totp_disabled: Two-factor code turned off.

@@ -74,6 +74,10 @@ class User implements UserInterface, EquatableInterface, PasswordAuthenticatedUs
     #[ORM\Column(type: Types::JSON)]
     private array $backupCodes = [];
 
+    /** Per-user salt for the backup code hashes; null only for codes created before the salt existed. */
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $backupCodesSalt = null;
+
     /** @var Collection<int, Domain> */
     #[ORM\ManyToMany(targetEntity: Domain::class, inversedBy: 'users')]
     #[ORM\JoinTable(name: 'user_domain')]
@@ -260,7 +264,21 @@ class User implements UserInterface, EquatableInterface, PasswordAuthenticatedUs
     /** @param list<string> $plainCodes */
     public function replaceBackupCodes(array $plainCodes): static
     {
-        $this->backupCodes = array_map(self::hashBackupCode(...), $plainCodes);
+        $this->backupCodesSalt = bin2hex(random_bytes(16));
+        $this->backupCodes = array_map($this->hashBackupCode(...), $plainCodes);
+
+        return $this;
+    }
+
+    public function getBackupCodesSalt(): ?string
+    {
+        return $this->backupCodesSalt;
+    }
+
+    /** Only for migrating hashes written before the salted format existed. */
+    public function setBackupCodesSalt(?string $salt): static
+    {
+        $this->backupCodesSalt = $salt;
 
         return $this;
     }
@@ -272,17 +290,23 @@ class User implements UserInterface, EquatableInterface, PasswordAuthenticatedUs
 
     public function isBackupCode(string $code): bool
     {
-        return \in_array(self::hashBackupCode($code), $this->backupCodes, true);
+        return \in_array($this->hashBackupCode($code), $this->backupCodes, true);
     }
 
     public function invalidateBackupCode(string $code): void
     {
-        $this->backupCodes = array_values(array_diff($this->backupCodes, [self::hashBackupCode($code)]));
+        $this->backupCodes = array_values(array_diff($this->backupCodes, [$this->hashBackupCode($code)]));
     }
 
-    private static function hashBackupCode(string $code): string
+    /**
+     * Salted with the per-user salt, so a leaked database alone does not make the
+     * codes reversible. Users without a salt keep their unsalted legacy hashes valid.
+     */
+    private function hashBackupCode(string $code): string
     {
-        return hash('sha256', strtolower(str_replace([' ', '-'], '', $code)));
+        $normalized = strtolower(str_replace([' ', '-'], '', $code));
+
+        return hash('sha256', null === $this->backupCodesSalt ? $normalized : $this->backupCodesSalt.'|'.$normalized);
     }
 
     /** @return Collection<int, Domain> */

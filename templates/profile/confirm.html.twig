@@ -1,0 +1,20 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'profile.confirm_title'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'profile.confirm_title'|trans }}</h1>
+            <p class="sub">{{ 'profile.confirm_intro'|trans }}</p>
+        </div>
+        {{ include('profile/_nav.html.twig') }}
+    </div>
+
+    <div class="card">
+        {% if error %}
+            <ul class="errors"><li>{{ error|trans }}</li></ul>
+        {% endif %}
+        {{ include('profile/_confirm_form.html.twig', {target: target}) }}
+    </div>
+{% endblock %}

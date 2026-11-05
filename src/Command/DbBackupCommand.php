@@ -54,6 +54,15 @@ final readonly class DbBackupCommand
         }
         // Own connection: VACUUM is not allowed inside a transaction of the app connection.
         new \PDO('sqlite:'.$source)->prepare('VACUUM INTO ?')->execute([$target]);
+
+        // The copy contains password hashes, TOTP secrets and API tokens: owner only.
+        clearstatcache(true, $target);
+        if (!chmod($target, 0o600) || 0o600 !== (fileperms($target) & 0o777)) {
+            $io->error(\sprintf('Cannot restrict the permissions of %s to 0600.', $target));
+
+            return Command::FAILURE;
+        }
+
         $io->success(\sprintf('Backup written to %s (%s KB).', $target, number_format((int) filesize($target) / 1024, 0, ',', '.')));
 
         return Command::SUCCESS;
