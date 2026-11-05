@@ -1,3 +1,28 @@
+{% macro th(label, key, sort, dir, query, class = '') %}
+    {% set active = sort == key %}
+    {% set default_dir = key in ['target', 'code'] ? 'asc' : 'desc' %}
+    {% set next = active ? (dir == 'asc' ? 'desc' : 'asc') : default_dir %}
+    {% set aria = active ? (dir == 'asc' ? 'ascending' : 'descending') : 'none' %}
+    <th class="{{ class }}" aria-sort="{{ aria }}">
+        <a class="sort-link{{ active ? ' active' }}"
+           href="{{ path('app_links', query|merge({sort: key, dir: next})) }}"
+           title="{{ ('link.sort_' ~ next)|trans }}">
+            {{ label }}<span class="sort-arrow" aria-hidden="true">{{ active ? (dir == 'asc' ? '↑' : '↓') : '↕' }}</span>
+        </a>
+    </th>
+{% endmacro %}
+
+{% import _self as sortui %}
+
+{#
+    `bulk` turns on the selection column and the clickable, whitelisted sort headers for the
+    /links list. The dashboard includes this partial without it and keeps its compact layout.
+#}
+{% set bulk = bulk|default(false) %}
+{% set sort = sort|default('created') %}
+{% set dir = dir|default('desc') %}
+{% set query = query|default({}) %}
+
 {% if links|length == 0 %}
     <div class="empty">
         <p>{{ 'links.empty'|trans }}</p>
@@ -7,25 +32,31 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ 'links.col.link'|trans }}</th>
+                    {% if bulk %}<th class="select-col"><input type="checkbox" data-check-all='input[form="bulk-form"][name="ids[]"]' aria-label="{{ 'bulk.select_all'|trans }}"></th>{% endif %}
+                    {% if bulk %}{{ sortui.th('links.col.link'|trans, 'code', sort, dir, query) }}{% else %}<th>{{ 'links.col.link'|trans }}</th>{% endif %}
+                    {% if bulk %}{{ sortui.th('links.col.target'|trans, 'target', sort, dir, query, 'hide-sm') }}{% endif %}
                     {% if show_owner %}<th class="hide-sm">{{ 'links.col.owner'|trans }}</th>{% endif %}
-                    <th class="num">{{ 'links.col.clicks'|trans }}</th>
-                    <th class="hide-sm">{{ 'links.col.created'|trans }}</th>
+                    {% if bulk %}{{ sortui.th('links.col.clicks'|trans, 'clicks', sort, dir, query, 'num') }}{% else %}<th class="num">{{ 'links.col.clicks'|trans }}</th>{% endif %}
+                    {% if bulk %}{{ sortui.th('links.col.last_click'|trans, 'last_click', sort, dir, query, 'hide-sm') }}{% endif %}
+                    {% if bulk %}{{ sortui.th('links.col.created'|trans, 'created', sort, dir, query, 'hide-sm') }}{% else %}<th class="hide-sm">{{ 'links.col.created'|trans }}</th>{% endif %}
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for link in links %}
                     <tr>
+                        {% if bulk %}<td class="select-col"><input type="checkbox" name="ids[]" value="{{ link.id }}" form="bulk-form" aria-label="{{ 'bulk.select_link'|trans({'%code%': link.domain.displayName ~ '/' ~ link.code}) }}"></td>{% endif %}
                         <td class="link-cell">
                             <a class="short truncate" href="{{ path('app_link_show', {id: link.id}) }}">{{ link.domain.displayName }}/{{ link.code }}</a>
-                            <span class="target truncate" title="{{ link.targetUrl }}">{{ link.title ?? link.targetUrl }}</span>
+                            {% if not bulk %}<span class="target truncate" title="{{ link.targetUrl }}">{{ link.title ?? link.targetUrl }}</span>{% endif %}
                             {% if not link.active %}<span class="badge badge-warning">{{ 'link.inactive'|trans }}</span>{% endif %}
                             {% if link.expired %}<span class="badge badge-danger">{{ 'link.expired'|trans }}</span>{% endif %}
                             {% if link.localisations|length > 0 %}<span class="badge">{{ link.localisations|map(l => l.language)|join(' · ') }}</span>{% endif %}
                         </td>
+                        {% if bulk %}<td class="hide-sm"><span class="truncate muted small" title="{{ link.targetUrl }}">{{ link.title ?? link.targetUrl }}</span></td>{% endif %}
                         {% if show_owner %}<td class="hide-sm small">{{ link.owner.displayName }}</td>{% endif %}
                         <td class="num">{{ link.clickCount|number_format(0, ',', '.') }}</td>
+                        {% if bulk %}<td class="hide-sm small muted nowrap">{{ link.lastClickAt ? link.lastClickAt|date('d.m.Y H:i') : '–' }}</td>{% endif %}
                         <td class="hide-sm small muted nowrap">{{ link.createdAt|date('d.m.Y') }}</td>
                         <td class="nowrap">
                             <button type="button" class="btn btn-sm" data-copy="{{ link.shortUrl }}" data-copied-label="{{ 'action.copied'|trans }}">{{ 'action.copy'|trans }}</button>

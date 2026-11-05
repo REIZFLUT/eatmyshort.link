@@ -118,6 +118,8 @@ links.col.link: Link
 links.col.owner: Owner
 links.col.clicks: Clicks
 links.col.created: Created
+links.col.target: Target
+links.col.last_click: Last click
 
 link.target_url: Target URL
 link.domain: Domain
@@ -144,6 +146,20 @@ link.short_url: Short link
 link.qr: QR code
 link.last_click: Last click
 link.total_clicks: Total clicks
+link.sort_asc: Sort ascending
+link.sort_desc: Sort descending
+
+bulk.activate: Activate
+bulk.deactivate: Deactivate
+bulk.move: Move
+bulk.move_domain: Target domain
+bulk.delete: Delete
+bulk.select_all: Select all
+bulk.select_link: 'Select link %code%'
+bulk.delete_confirm: 'Delete the selected links for good? Their statistics are deleted too.'
+bulk.none: 'No links selected.'
+bulk.move_invalid: 'Target domain is inactive or not assigned to you.'
+bulk.result: '%changed% changed, %denied% skipped (missing rights), %conflicts% skipped due to a code conflict'
 
 localisation.language: Language
 localisation.target_url: Target URL
