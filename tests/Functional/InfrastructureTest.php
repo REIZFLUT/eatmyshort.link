@@ -40,6 +40,13 @@ final class InfrastructureTest extends KernelTestCase
             $container->get('session.handler'),
             'the session handler must be session.handler.native_file',
         );
+
+        // var/sessions is not cleaned by Debian's cron (it only knows /var/lib/php/sessions)
+        // and php.ini sets gc_probability=0: without our own GC, expired sessions would
+        // never be deleted and a stolen session id would stay valid forever.
+        $options = $container->getParameter('session.storage.options');
+        self::assertSame(1, (int) $options['gc_probability']);
+        self::assertSame(100, (int) $options['gc_divisor']);
     }
 
     public function testAdminIpCommand(): void

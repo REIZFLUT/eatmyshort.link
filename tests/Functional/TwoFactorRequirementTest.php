@@ -73,6 +73,33 @@ final class TwoFactorRequirementTest extends AppTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testPasswordSessionCannotEnrolItsOwnTotpWhenAPasskeyExists(): void
+    {
+        $user = $this->createUser('eve@example.com', admin: true);
+        $this->addPasskey($user);
+        static::getContainer()->get(Settings::class)->save([Settings::REQUIRE_2FA_ADMINS => true]);
+
+        $this->login('eve@example.com', self::PASSWORD);
+
+        // Setting up a factor must not upgrade a password-only session: the setup pages are
+        // reachable in the allowlist of the listener, so the passkey check has to come first.
+        $this->client->request('GET', '/profile/totp');
+        self::assertResponseRedirects('http://'.self::ADMIN_HOST.'/login', message: 'no self-service upgrade past the requirement');
+
+        $this->client->request('GET', '/admin/settings');
+        self::assertResponseRedirects('http://'.self::ADMIN_HOST.'/login');
+    }
+
+    public function testAdminWithoutSecondFactorCanStillSetUpTotp(): void
+    {
+        $user = $this->createUser('frank@example.com', admin: true);
+        static::getContainer()->get(Settings::class)->save([Settings::REQUIRE_2FA_ADMINS => true]);
+
+        $this->login('frank@example.com', self::PASSWORD);
+        $this->client->request('GET', '/profile/totp');
+        self::assertResponseIsSuccessful('an admin without any factor has to be able to enrol one');
+    }
+
     private function addPasskey(User $user): void
     {
         $record = new CredentialRecord(

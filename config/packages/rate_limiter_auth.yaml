@@ -8,3 +8,10 @@ framework:
             policy: fixed_window
             limit: 3
             interval: '1 hour'
+
+        # The profile confirmation form verifies a password or TOTP code; without a limit a
+        # hijacked session could brute-force it (six-digit codes included).
+        profile_confirm:
+            policy: fixed_window
+            limit: 5
+            interval: '15 minutes'

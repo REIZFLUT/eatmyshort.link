@@ -202,6 +202,7 @@ profile.confirm_needed: For security reasons you have to confirm again for this 
 profile.confirm_password: Password
 profile.confirm_button: Confirm
 profile.confirm_failed: The confirmation failed. Please check your input.
+profile.confirm_too_many: Too many confirmation attempts. Please wait 15 minutes and try again.
 profile.confirm_no_factor: This account has no password and no two-factor code to confirm with yet. Set a password first.
 profile.confirm_passkey_hint: This account signs in with a passkey. Sign in with the passkey once more – security-relevant actions are then unlocked for five minutes.
 profile.confirm_passkey_button: Confirm with passkey

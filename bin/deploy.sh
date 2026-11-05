@@ -17,7 +17,9 @@
 # Umgebungsvariablen:
 #   SKIP_BACKUP=1        kein Datenbank-Backup vor dem Deploy
 #   ALLOW_ROLLBACK=0     bei Fehlern nicht auf den alten Commit zurueckgehen
-#   PHP_FPM_RELOAD='...' eigener Befehl zum Neuladen von PHP-FPM
+#   PHP_FPM_RELOAD='...' eigener Befehl zum Neuladen von PHP-FPM (sonst systemctl
+#                        reload als root bzw. per passwortlosem sudo; der Reload-Weg
+#                        wird vor dem ersten schreibenden Schritt geprueft)
 #   HEALTHCHECK=0        Healthcheck am Ende ueberspringen
 #   HEALTH_URL=...       Default: DEFAULT_URI aus .env.local + /healthz,
 #                        sonst http://127.0.0.1/healthz
@@ -103,7 +105,17 @@ on_error() {
         printf '    Rollback auf %s ...\n' "$OLD_COMMIT"
         if git reset --hard "$OLD_COMMIT"; then
             printf '    Code auf den alten Commit zurueckgesetzt.\n'
+            # vendor/ und der kompilierte Container gehoeren zum neuen Stand; ohne diese
+            # beiden Schritte laeuft der alte Code gegen neue Bibliotheken.
+            if ! composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction; then
+                printf '    WARNUNG: composer install beim Rollback fehlgeschlagen.\n' >&2
+            fi
+            if ! php bin/console cache:clear --env=prod; then
+                printf '    WARNUNG: cache:clear beim Rollback fehlgeschlagen.\n' >&2
+            fi
             reload_fpm || printf '    WARNUNG: PHP-FPM liess sich beim Rollback nicht neu laden.\n'
+            printf '    HINWEIS: Bereits ausgefuhrte Migrationen werden NICHT zurueckgerollt.\n'
+            printf '             Noetigenfalls doctrine:migrations:migrate prev manuell ausfuehren.\n'
         else
             printf '    WARNUNG: git reset --hard ist fehlgeschlagen; bitte manuell eingreifen.\n' >&2
         fi
@@ -116,48 +128,97 @@ on_error() {
 trap on_error ERR
 
 # ---------------------------------------------------------------------------
-# PHP-FPM neu laden. Reihenfolge: PHP_FPM_RELOAD, systemd-Unit php*-fpm,
-# php-fpm-Binary mit -USR2. Ohne Reload laeuft bei opcache.validate_timestamps=0
-# weiterhin der alte Code gegen den neuen Container.
+# PHP-FPM neu laden. Ohne Reload laeuft bei opcache.validate_timestamps=0 weiterhin
+# der alte Code gegen den neuen Container - das ist der Kern des Befunds B1.
+#
+# Reihenfolge: PHP_FPM_RELOAD (freier Befehl), systemctl reload als root, sudo -n
+# systemctl reload, kill -USR2 auf den Master-Prozess (nur als root moeglich).
+# Ob ueberhaupt ein Weg existiert, prueft resolve_fpm_reload() VOR dem ersten
+# schreibenden Schritt - sonst scheitert jedes Deploy erst nach den Migrationen.
 # ---------------------------------------------------------------------------
-reload_fpm() {
+FPM_RELOAD_KIND=""
+FPM_RELOAD_TARGET=""
+
+resolve_fpm_reload() {
     if [[ -n "${PHP_FPM_RELOAD:-}" ]]; then
-        run bash -c "$PHP_FPM_RELOAD" || return 1
+        FPM_RELOAD_KIND="command"
         return 0
     fi
 
-    if ((DRY_RUN)); then
-        info '[dry-run] PHP-FPM neu laden (systemctl reload php*-fpm oder php-fpm -USR2)'
-        return 0
-    fi
-
-    local unit=""
+    local unit="" master=""
     if command -v systemctl >/dev/null 2>&1; then
         unit="$(systemctl list-units --type=service --plain --no-legend 'php*-fpm.service' 2>/dev/null | awk 'NR == 1 {print $1}')" || true
     fi
-    if [[ -n "$unit" ]]; then
-        if ! systemctl reload "$unit"; then
-            printf 'FEHLER: PHP-FPM (%s) liess sich nicht neu laden.\n' "$unit" >&2
-            return 1
+
+    if [[ "$(id -u)" == "0" ]]; then
+        if [[ -n "$unit" ]]; then
+            FPM_RELOAD_KIND="systemd"
+            FPM_RELOAD_TARGET="$unit"
+            return 0
         fi
-        info "systemctl reload $unit"
+        master="$(fpm_master_pid || true)"
+        if [[ -n "$master" ]]; then
+            FPM_RELOAD_KIND="signal"
+            FPM_RELOAD_TARGET="$master"
+            return 0
+        fi
+    fi
+
+    if [[ -n "$unit" ]] && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+        FPM_RELOAD_KIND="sudo-systemd"
+        FPM_RELOAD_TARGET="$unit"
         return 0
     fi
 
-    local candidate
-    for candidate in php-fpm php-fpm8.4 php-fpm8.3 /usr/sbin/php-fpm /usr/sbin/php-fpm8.4; do
-        if command -v "$candidate" >/dev/null 2>&1; then
-            if ! "$candidate" -USR2; then
-                printf 'FEHLER: %s -USR2 ist fehlgeschlagen.\n' "$candidate" >&2
-                return 1
-            fi
-            info "$candidate -USR2"
-            return 0
-        fi
-    done
-
-    printf 'FEHLER: Kein PHP-FPM gefunden. PHP_FPM_RELOAD setzen (z. B. "systemctl reload php8.4-fpm").\n' >&2
+    printf 'FEHLER: Kein Weg gefunden, PHP-FPM neu zu laden.\n' >&2
+    printf '        Das Skript laeuft als %s; systemctl reload braucht Root-Rechte.\n' "$(id -un)" >&2
+    printf '        Entweder als root/sudo ausfuehren, passwortloses sudo fuer systemctl\n' >&2
+    printf '        einrichten oder PHP_FPM_RELOAD setzen, z. B.\n' >&2
+    printf '        PHP_FPM_RELOAD="sudo -n systemctl reload php8.4-fpm".\n' >&2
     return 1
+}
+
+fpm_master_pid() {
+    local file pid
+    for file in /run/php/php*-fpm.pid /var/run/php/php*-fpm.pid; do
+        [[ -r "$file" ]] || continue
+        pid="$(tr -dc '0-9' <"$file")"
+        [[ -n "$pid" ]] && printf '%s' "$pid" && return 0
+    done
+    if command -v pgrep >/dev/null 2>&1; then
+        pid="$(pgrep -o -f 'php-fpm: master process' || true)"
+        [[ -n "$pid" ]] && printf '%s' "$pid" && return 0
+    fi
+    return 1
+}
+
+reload_fpm() {
+    if ((DRY_RUN)); then
+        info "[dry-run] PHP-FPM neu laden (${FPM_RELOAD_KIND:-unbekannt} ${FPM_RELOAD_TARGET:-})"
+        return 0
+    fi
+
+    case "$FPM_RELOAD_KIND" in
+        command)
+            run bash -c "$PHP_FPM_RELOAD" || return 1
+            ;;
+        systemd)
+            systemctl reload "$FPM_RELOAD_TARGET" || return 1
+            info "systemctl reload $FPM_RELOAD_TARGET"
+            ;;
+        sudo-systemd)
+            sudo -n systemctl reload "$FPM_RELOAD_TARGET" || return 1
+            info "sudo -n systemctl reload $FPM_RELOAD_TARGET"
+            ;;
+        signal)
+            kill -USR2 "$FPM_RELOAD_TARGET" || return 1
+            info "kill -USR2 $FPM_RELOAD_TARGET"
+            ;;
+        *)
+            printf 'FEHLER: PHP-FPM-Reload ist nicht konfiguriert.\n' >&2
+            return 1
+            ;;
+    esac
 }
 
 # ---------------------------------------------------------------------------
@@ -177,6 +238,11 @@ fi
 if [[ "${HEALTHCHECK:-1}" != "0" && -z "${HEALTH_URL:-}" ]]; then
     command -v curl >/dev/null 2>&1 || fail 'curl fehlt, wird fuer den Healthcheck gebraucht (oder HEALTHCHECK=0 setzen).'
 fi
+
+# Vor dem ersten schreibenden Schritt klaeren, ob PHP-FPM ueberhaupt neu geladen
+# werden kann: sonst rollt ein an sich erfolgreiches Deploy nach den Migrationen zurueck.
+resolve_fpm_reload || fail 'Abbruch vor dem ersten schreibenden Schritt.'
+info "PHP-FPM-Reload: ${FPM_RELOAD_KIND} ${FPM_RELOAD_TARGET}"
 
 # ---------------------------------------------------------------------------
 # 1) Backup

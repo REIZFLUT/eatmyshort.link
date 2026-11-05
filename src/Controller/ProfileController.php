@@ -21,9 +21,11 @@ use Scheb\TwoFactorBundle\Model\Totp\TotpConfigurationInterface;
 use Scheb\TwoFactorBundle\Model\Totp\TwoFactorInterface;
 use Scheb\TwoFactorBundle\Security\TwoFactor\Provider\Totp\TotpAuthenticatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -93,6 +95,8 @@ final class ProfileController extends AbstractController
         UserPasswordHasherInterface $hasher,
         TotpAuthenticatorInterface $totp,
         SensitiveConfirmation $confirmation,
+        #[Autowire(service: 'limiter.profile_confirm')]
+        RateLimiterFactoryInterface $confirmLimiter,
     ): Response {
         // Whitelisted targets only: no open redirect through the query string.
         $requested = $request->isMethod('POST') ? $request->request->get('target') : $request->query->get('target');
@@ -105,6 +109,15 @@ final class ProfileController extends AbstractController
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('profile-confirm', (string) $request->request->get('_token'))) {
                 throw $this->createAccessDeniedException();
+            }
+            // A hijacked session must not be able to guess the password (or the six-digit
+            // TOTP code) here: the confirmation form is throttled per account.
+            if (!$confirmLimiter->create('user-'.$user->getId())->consume()->isAccepted()) {
+                return $this->render('profile/confirm.html.twig', [
+                    'target' => $target,
+                    'has_passkeys' => $this->credentials->countByUser($user) > 0,
+                    'error' => 'profile.confirm_too_many',
+                ], new Response(status: Response::HTTP_TOO_MANY_REQUESTS));
             }
             if (!$canConfirm) {
                 throw $this->createAccessDeniedException('This account has no credential to confirm with.');

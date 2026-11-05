@@ -202,6 +202,7 @@ profile.confirm_needed: Aus Sicherheitsgründen musst du dich für diese Änderu
 profile.confirm_password: Passwort
 profile.confirm_button: Bestätigen
 profile.confirm_failed: Die Bestätigung ist fehlgeschlagen. Bitte prüfe deine Eingabe.
+profile.confirm_too_many: Zu viele Bestätigungsversuche. Bitte warte 15 Minuten und versuche es dann erneut.
 profile.confirm_no_factor: Für dieses Konto gibt es noch kein Passwort und keinen Zwei-Faktor-Code, mit dem du dich bestätigen könntest. Lege zuerst ein Passwort fest.
 profile.confirm_passkey_hint: Dieses Konto meldet sich mit einem Passkey an. Melde dich einmal neu mit dem Passkey an – danach sind sicherheitsrelevante Aktionen fünf Minuten lang freigeschaltet.
 profile.confirm_passkey_button: Mit Passkey bestätigen

@@ -19,18 +19,23 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 /**
- * With "2FA required for admins" switched on, an admin without TOTP and without
- * a passkey can only reach the security page until one of them is set up.
+ * Enforces "2FA required for admins".
  *
- * A registered passkey only counts as a second factor when the session was
- * actually opened with it: an admin who signs in with the password alone is
- * logged out again instead of being let through.
+ * A registered passkey only counts as a second factor when the session was actually
+ * opened with it. A password-only session of an admin who owns a passkey is dropped -
+ * on every route, including the profile pages: otherwise it could simply enrol its own
+ * TOTP and upgrade itself past the requirement.
+ *
+ * An admin with no second factor at all may only reach the pages that set one up.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 0)]
 final readonly class TwoFactorRequirementListener
 {
-    // app_login: the login POST itself has to finish, the guard kicks in on the next request.
-    private const array ALLOWED_ROUTE_PREFIXES = ['app_login', 'app_profile_security', 'app_profile_totp', 'app_profile_passkey', 'app_logout', 'webauthn', '_wdt', '_profiler'];
+    /** Routes that must stay reachable in every state: the login flow itself and logout. */
+    private const array AUTH_ROUTE_PREFIXES = ['app_login', 'app_logout', 'webauthn', '_wdt', '_profiler'];
+
+    /** Pages that enrol a second factor; the only ones open to an admin without any. */
+    private const array SETUP_ROUTE_PREFIXES = ['app_profile_security', 'app_profile_totp', 'app_profile_passkey'];
 
     public function __construct(
         private Security $security,
@@ -48,12 +53,9 @@ final readonly class TwoFactorRequirementListener
         if (!$event->isMainRequest() || 'short_link' === $route || str_starts_with($request->getPathInfo(), '/api/')) {
             return;
         }
-        foreach (self::ALLOWED_ROUTE_PREFIXES as $prefix) {
-            if (str_starts_with($route, $prefix)) {
-                return;
-            }
+        if (self::matches($route, self::AUTH_ROUTE_PREFIXES)) {
+            return;
         }
-
         if ($this->security->getToken() instanceof TwoFactorTokenInterface) {
             return;
         }
@@ -66,18 +68,19 @@ final readonly class TwoFactorRequirementListener
         }
 
         $session = $request->hasSession() ? $request->getSession() : null;
+        $method = $session instanceof SessionInterface ? $session->get(LoginSuccessListener::SESSION_AUTH_METHOD) : null;
+
         if ($this->credentials->countByUser($user) > 0) {
-            // A passkey is registered, so the account has a second factor - but
-            // only a passkey login uses it. Refuse the password-only session.
-            if ($session instanceof SessionInterface && LoginSuccessListener::METHOD_PASSWORD === $session->get(LoginSuccessListener::SESSION_AUTH_METHOD)) {
-                $this->tokens->setToken(null);
-                $session->invalidate();
-                if ($session instanceof FlashBagAwareSessionInterface) {
-                    $session->getFlashBag()->add('danger', 'flash.password_login_passkey_only');
-                }
-                $event->setResponse(new RedirectResponse($this->urls->generate('app_login')));
+            // Passkey registered: only a passkey login counts. Sessions from before the
+            // marker existed are treated like password logins (fail closed).
+            if (LoginSuccessListener::METHOD_PASSKEY !== $method) {
+                $this->refuse($event, $session, 'flash.password_login_passkey_only');
             }
 
+            return;
+        }
+
+        if (self::matches($route, self::SETUP_ROUTE_PREFIXES)) {
             return;
         }
 
@@ -85,5 +88,27 @@ final readonly class TwoFactorRequirementListener
             $session->getFlashBag()->add('warning', 'flash.2fa_required');
         }
         $event->setResponse(new RedirectResponse($this->urls->generate('app_profile_security')));
+    }
+
+    /** @param list<string> $prefixes */
+    private static function matches(string $route, array $prefixes): bool
+    {
+        foreach ($prefixes as $prefix) {
+            if (str_starts_with($route, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function refuse(RequestEvent $event, ?SessionInterface $session, string $flash): void
+    {
+        $this->tokens->setToken(null);
+        $session?->invalidate();
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add('danger', $flash);
+        }
+        $event->setResponse(new RedirectResponse($this->urls->generate('app_login')));
     }
 }

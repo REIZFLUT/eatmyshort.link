@@ -9,6 +9,9 @@ use App\Entity\User;
 use App\Security\SecretBox;
 use OTPHP\TOTP;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\RateLimiter\LimiterInterface;
+use Symfony\Component\RateLimiter\RateLimit;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * S4: disabling TOTP, creating API tokens and registering passkeys need a fresh
@@ -233,5 +236,49 @@ final class ProfileSecurityTest extends AppTestCase
         self::assertNotNull($token, 'CSRF token for '.$action);
 
         return $token;
+    }
+
+    public function testConfirmationRefusesWhenTheLimitIsExhausted(): void
+    {
+        // The limiter storage is reset between requests in the test environment, so the
+        // exhausted state is simulated: the controller has to consult it and answer 429.
+        // It must be replaced before the first request, the container is already built then.
+        $limiter = $this->createStub(LimiterInterface::class);
+        $limiter->method('consume')->willReturn(new RateLimit(0, new \DateTimeImmutable('+15 minutes'), false, 5));
+        $factory = $this->createStub(RateLimiterFactoryInterface::class);
+        $factory->method('create')->willReturn($limiter);
+        static::getContainer()->set('limiter.profile_confirm', $factory);
+
+        $this->client->loginUser($this->createUser('throttle@example.com'));
+        $crawler = $this->client->request('GET', '/profile/confirm');
+        // Scope to the confirmation form: the layout also renders a logout form with a _token.
+        $token = $crawler->filter('form[action="/profile/confirm"] input[name=_token]')->attr('value');
+
+        $this->client->request('POST', '/profile/confirm', [
+            'password' => self::PASSWORD,
+            'target' => 'security',
+            '_token' => $token,
+        ]);
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertSelectorTextContains('.errors', 'Zu viele');
+
+        // The window stays closed: the security page still asks for a confirmation instead
+        // of offering the action itself.
+        $this->client->request('GET', '/profile/security');
+        self::assertSelectorExists('form[action="/profile/confirm"]');
+        self::assertSelectorNotExists('form[action="/profile/totp/disable"]');
+    }
+
+    public function testConfirmationLimiterAllowsFiveAttemptsPerQuarterHour(): void
+    {
+        /** @var RateLimiterFactoryInterface $factory */
+        $factory = static::getContainer()->get('limiter.profile_confirm');
+        $key = 'user-'.bin2hex(random_bytes(4));
+
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            self::assertTrue($factory->create($key)->consume()->isAccepted(), 'attempt '.$attempt.' is allowed');
+        }
+        self::assertFalse($factory->create($key)->consume()->isAccepted(), 'the sixth attempt is refused');
     }
 }

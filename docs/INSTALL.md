@@ -125,7 +125,14 @@ HTTP leitet auf HTTPS um.
 15 3 * * *  www-data  php /var/www/eatmyshort/bin/console app:clicks:prune --quiet
 # Sicherung der SQLite-Datenbank (konsistent im laufenden Betrieb), 14 Tage behalten
 30 3 * * *  www-data  php /var/www/eatmyshort/bin/console app:db:backup --quiet && find /var/www/eatmyshort/var/backup -name '*.sqlite' -mtime +14 -delete
+# Abgelaufene Cache-Einträge entfernen (u. a. die Zähler des Tracking-Rate-Limiters)
+45 3 * * *  www-data  php /var/www/eatmyshort/bin/console cache:pool:prune --quiet
 ```
+
+Der Tracking-Rate-Limiter legt pro aufrufender IP einen Zähler im Cache an. Die
+Einträge laufen nach einer Minute ab, die Dateien werden aber erst durch
+`cache:pool:prune` gelöscht — ohne den Cronjob wächst `var/cache` mit der Zahl der
+Besucher-IPs.
 
 `app:db:backup` sichert **nur die Datenbank**. `.env.local` gehört in ein separates,
 verschlüsseltes Backup, insbesondere `APP_SECRET`: Daraus werden die TOTP-Schlüssel
@@ -148,11 +155,18 @@ zwischen Pull und FPM-Reload fehl, wird der alte Commit wiederhergestellt
 (`ALLOW_ROLLBACK=0` deaktiviert das) und der Wartungsmodus beendet.
 
 Der FPM-Reload ist Pflicht, weil unten `opcache.validate_timestamps=0` empfohlen
-wird: ohne Reload läuft der alte Code gegen den neuen Container. Das Skript erkennt
-`php*-fpm`-Units per systemd und fällt sonst auf `php-fpm -USR2` zurück; mit
-`PHP_FPM_RELOAD='systemctl reload php8.4-fpm'` lässt sich der Befehl fest vorgeben.
-Der Healthcheck nutzt `HEALTH_URL` oder leitet die URL aus `DEFAULT_URI` ab
-(Standard `http://127.0.0.1/healthz`).
+wird: ohne Reload läuft der alte Code gegen den neuen Container. `systemctl reload`
+braucht Root-Rechte; das Skript läuft aber als Dateibesitzer. Es sucht sich deshalb
+einen Weg (als root: systemd-Unit oder `kill -USR2` auf den Master-Prozess; sonst
+passwortloses `sudo -n`, sofern eingerichtet) und **prüft das vor dem ersten
+schreibenden Schritt** — fehlt ein Weg, bricht es sofort ab, statt nach den
+Migrationen zurückzurollen. Alternativ `PHP_FPM_RELOAD='sudo -n systemctl reload
+php8.4-fpm'` (oder ein eigenes Wrapper-Skript) setzen.
+
+Der Rollback setzt den Commit zurück, installiert die Abhängigkeiten des alten
+Stands neu und leert den Prod-Cache; **Migrationen werden nicht zurückgerollt**
+(das Skript weist darauf hin). Der Healthcheck nutzt `HEALTH_URL` oder leitet die URL
+aus `DEFAULT_URI` ab (Standard `http://127.0.0.1/healthz`).
 
 Release-Verzeichnisse mit symlink-Umschaltung sind die sauberere Variante: Der
 Wechsel ist atomar und ein Rollback braucht kein `git reset`. Dieses Projekt bleibt

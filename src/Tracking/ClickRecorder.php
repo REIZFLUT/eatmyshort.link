@@ -50,19 +50,6 @@ final class ClickRecorder
             return;
         }
 
-        // Rate-limit tracking per client so a script cannot grow the click table without bound.
-        // Tracking must never break the redirect, so a limiter failure fails open.
-        try {
-            $client = $request->getClientIp() ?? 'unknown';
-            if (!$this->limiter->create($client)->consume()->isAccepted()) {
-                $this->logger->debug('Click tracking rate limit exceeded for {client}.', ['client' => $client]);
-
-                return;
-            }
-        } catch (\Throwable $e) {
-            $this->logger->warning('Click tracking rate limiter failed: {message}', ['message' => $e->getMessage()]);
-        }
-
         $request->attributes->set(self::ATTRIBUTE, $link->getId());
     }
 
@@ -85,6 +72,20 @@ final class ClickRecorder
         $link = $this->em->find(Link::class, $linkId);
         if (null === $link) {
             return null;
+        }
+
+        // Rate-limit tracking per client so a script cannot grow the click table without
+        // bound. This runs after the response has been sent (kernel.terminate), so the
+        // visitor never waits for the limiter; a limiter failure fails open.
+        try {
+            $client = $request->getClientIp() ?? 'unknown';
+            if (!$this->limiter->create($client)->consume()->isAccepted()) {
+                $this->logger->debug('Click tracking rate limit exceeded for {client}.', ['client' => $client]);
+
+                return null;
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Click tracking rate limiter failed: {message}', ['message' => $e->getMessage()]);
         }
 
         $ip = $request->getClientIp();
