@@ -19,6 +19,14 @@ Built on a lean Symfony 8 core with SQLite, no Node build step and no background
 - **Admin area can be restricted to IP addresses/networks** (IPv4/IPv6, CIDR) with lock-out protection.
 - **Passkeys (WebAuthn)** for passwordless, phishing-resistant sign-in; **TOTP** with backup codes for password
   logins; mandatory 2FA for admins can be switched on.
+- **Bookmarklets** – shorten the page you are on from the bookmarks bar (with or without a custom code),
+  optionally create-and-follow, plus share links on every link page.
+- **CSV import** – bring a grown YOURLS instance or an Excel list over in one step: preview first,
+  YOURLS column names (`url`, `keyword`, `title`) are recognised, duplicates are skipped.
+- **Working list** – sort by clicks, last click, target or code; activate, deactivate, delete or move
+  several links at once (only links you are allowed to change).
+- **Automatic page titles** – fetched from the target page when a link is created (switchable, with an
+  SSRF guard so the server never calls private addresses).
 - QR codes (SVG/PNG), CSV export, expiry date, active toggle, 301/302/307/308.
 - **REST API** with personal tokens ([docs/API.md](docs/API.md)).
 - Interface in German and English, light/dark, usable on mobile, custom logo and accent colour

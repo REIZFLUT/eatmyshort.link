@@ -25,13 +25,15 @@
             </a>
             <nav class="nav" aria-label="{{ 'nav.main'|trans }}">
                 <a href="{{ path('app_dashboard') }}" class="{{ route == 'app_dashboard' ? 'active' }}">{{ 'nav.dashboard'|trans }}</a>
-                <a href="{{ path('app_links') }}" class="{{ route starts with 'app_link' ? 'active' }}">{{ 'nav.links'|trans }}</a>
+                <a href="{{ path('app_links') }}" class="{{ route starts with 'app_link' and route != 'app_tools_bookmarklet' ? 'active' }}">{{ 'nav.links'|trans }}</a>
+                <a href="{{ path('app_tools_bookmarklet') }}" class="{{ route == 'app_tools_bookmarklet' ? 'active' }}">{{ 'nav.tools'|trans }}</a>
                 {% if is_admin() %}
                     <span class="sep" aria-hidden="true"></span>
                     <a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ 'nav.users'|trans }}</a>
                     <a href="{{ path('app_admin_domains') }}" class="{{ route starts with 'app_admin_domain' ? 'active' }}">{{ 'nav.domains'|trans }}</a>
                     <a href="{{ path('app_admin_stats') }}" class="{{ route == 'app_admin_stats' ? 'active' }}">{{ 'nav.stats'|trans }}</a>
                     <a href="{{ path('app_admin_ip_rules') }}" class="{{ route starts with 'app_admin_ip' ? 'active' }}">{{ 'nav.ip_rules'|trans }}</a>
+                    <a href="{{ path('app_admin_import') }}" class="{{ route starts with 'app_admin_import' ? 'active' }}">{{ 'nav.import'|trans }}</a>
                     <a href="{{ path('app_admin_settings') }}" class="{{ route == 'app_admin_settings' ? 'active' }}">{{ 'nav.settings'|trans }}</a>
                 {% endif %}
             </nav>

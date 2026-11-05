@@ -18,6 +18,14 @@ Gebaut auf einem schlanken Symfony-8-Kern mit SQLite, ohne Node-Build und ohne H
 - **Admin-Bereich auf IP-Adressen/Netze einschränkbar** (IPv4/IPv6, CIDR) mit Aussperr-Schutz.
 - **Passkeys (WebAuthn)** für passwortlose, phishing-sichere Anmeldung; **TOTP** mit Backup-Codes für Passwort-Logins;
   2FA-Pflicht für Admins einschaltbar.
+- **Lesezeichen** – die aktuelle Seite direkt aus der Lesezeichenleiste kürzen (mit oder ohne Wunschkürzel),
+  optional anlegen und gleich weiterleiten; Teilen-Links auf jeder Link-Seite.
+- **CSV-Import** – eine gewachsene YOURLS-Instanz oder eine Excel-Liste in einem Schritt übernehmen:
+  erst Vorschau, YOURLS-Spalten (`url`, `keyword`, `title`) werden erkannt, Dubletten übersprungen.
+- **Arbeitsliste** – nach Klicks, letztem Klick, Ziel oder Kürzel sortieren; mehrere Links auf einmal
+  aktivieren, deaktivieren, löschen oder verschieben (nur Links, die man ändern darf).
+- **Automatische Seitentitel** – beim Anlegen vom Ziel abgeholt (abschaltbar, mit SSRF-Schutz, damit der
+  Server nie private Adressen aufruft).
 - QR-Codes (SVG/PNG), CSV-Export, Ablaufdatum, Aktiv-Schalter, 301/302/307/308.
 - **REST-API** mit persönlichen Tokens ([docs/API.md](docs/API.md)).
 - Oberfläche auf Deutsch und Englisch, hell/dunkel, mobil nutzbar, eigenes Logo und Akzentfarbe

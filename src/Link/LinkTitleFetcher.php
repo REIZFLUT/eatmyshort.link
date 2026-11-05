@@ -21,6 +21,7 @@ final class LinkTitleFetcher
 {
     private const int MAX_BYTES = 262144; // 256 KB
     private const int MAX_TITLE_LENGTH = 255;
+    private const int MAX_REDIRECTS = 2;
 
     public function __construct(
         private readonly HttpClientInterface $client,
@@ -31,40 +32,104 @@ final class LinkTitleFetcher
     public function fetch(string $url): ?string
     {
         try {
-            if (!$this->isSafeTarget($url)) {
-                return null;
+            $current = $url;
+            // Redirects are followed manually: the HTTP client would otherwise follow a
+            // Location into a private address without asking this guard again.
+            for ($hop = 0; $hop <= self::MAX_REDIRECTS; ++$hop) {
+                if (!$this->isSafeTarget($current)) {
+                    return null;
+                }
+
+                $response = $this->client->request('GET', $current, [
+                    'timeout' => 3,
+                    'max_duration' => 5,
+                    'max_redirects' => 0,
+                    'headers' => [
+                        'User-Agent' => 'EatMyShort.Link Titelabruf',
+                        'Accept' => 'text/html',
+                    ],
+                ]);
+
+                $status = $response->getStatusCode();
+                if (\in_array($status, [301, 302, 303, 307, 308], true)) {
+                    $location = $response->getHeaders(false)['location'][0] ?? null;
+                    $response->cancel();
+                    if (!\is_string($location) || '' === $location) {
+                        return null;
+                    }
+                    $next = $this->absoluteLocation($current, $location);
+                    if (null === $next) {
+                        return null;
+                    }
+                    $current = $next;
+                    continue;
+                }
+
+                // Defence in depth against DNS rebinding: check the address we are really
+                // connected to, not only the one that was resolved before the request.
+                $primaryIp = $response->getInfo('primary_ip');
+                if (\is_string($primaryIp) && '' !== $primaryIp && !$this->isPublicIp($primaryIp)) {
+                    $response->cancel();
+
+                    return null;
+                }
+
+                return $this->titleFromResponse($response);
             }
 
-            $response = $this->client->request('GET', $url, [
-                'timeout' => 3,
-                'max_duration' => 5,
-                'max_redirects' => 2,
-                'headers' => [
-                    'User-Agent' => 'EatMyShort.Link Titelabruf',
-                    'Accept' => 'text/html',
-                ],
-            ]);
-
-            $status = $response->getStatusCode();
-            if ($status < 200 || $status >= 300) {
-                $response->cancel();
-
-                return null;
-            }
-
-            $contentType = mb_strtolower($response->getHeaders(false)['content-type'][0] ?? '');
-            if (!str_contains($contentType, 'text/html') && !str_contains($contentType, 'application/xhtml+xml')) {
-                $response->cancel();
-
-                return null;
-            }
-
-            return $this->extractTitle($this->readLimited($response));
+            return null;
         } catch (\Throwable $e) {
             $this->logger->debug('Titelabruf für "{url}" fehlgeschlagen: {message}', ['url' => $url, 'message' => $e->getMessage()]);
 
             return null;
         }
+    }
+
+    /** Reads and validates one (non-redirect) response. */
+    private function titleFromResponse(ResponseInterface $response): ?string
+    {
+        $status = $response->getStatusCode();
+        if ($status < 200 || $status >= 300) {
+            $response->cancel();
+
+            return null;
+        }
+
+        $contentType = mb_strtolower($response->getHeaders(false)['content-type'][0] ?? '');
+        if (!str_contains($contentType, 'text/html') && !str_contains($contentType, 'application/xhtml+xml')) {
+            $response->cancel();
+
+            return null;
+        }
+
+        return $this->extractTitle($this->readLimited($response));
+    }
+
+    /** Turns a Location header into an absolute URL, or null when it is not http(s). */
+    private function absoluteLocation(string $base, string $location): ?string
+    {
+        $location = trim($location);
+        if (preg_match('#^https?://#i', $location)) {
+            return $location;
+        }
+        $parts = parse_url($base);
+        if (!\is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+        $scheme = (string) $parts['scheme'];
+        $authority = $scheme.'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+
+        if (str_starts_with($location, '//')) {
+            return $scheme.':'.$location;
+        }
+        if (str_starts_with($location, '/')) {
+            return $authority.$location;
+        }
+
+        $path = (string) ($parts['path'] ?? '/');
+        $directory = rtrim(substr($path, 0, (int) strrpos($path, '/') + 1), '/');
+
+        return $authority.'/'.ltrim(ltrim($directory, '/').'/'.$location, '/');
     }
 
     /**
@@ -92,8 +157,15 @@ final class LinkTitleFetcher
             return $this->isPublicIp($host);
         }
 
-        $addresses = gethostbynamel($host);
-        if (false === $addresses || [] === $addresses) {
+        // gethostbynamel() is IPv4 only; a host with a public A record and a private AAAA
+        // record would otherwise slip through.
+        $addresses = gethostbynamel($host) ?: [];
+        foreach (dns_get_record($host, \DNS_AAAA) ?: [] as $record) {
+            if (\is_string($record['ipv6'] ?? null)) {
+                $addresses[] = $record['ipv6'];
+            }
+        }
+        if ([] === $addresses) {
             return false;
         }
         foreach ($addresses as $address) {

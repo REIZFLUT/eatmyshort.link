@@ -105,6 +105,33 @@ final class LinkTitleFetcherTest extends TestCase
         self::assertNull($fetcher->fetch('http://93.184.216.34/seite'));
     }
 
+    public function testRedirectIntoAPrivateAddressIsNotFollowed(): void
+    {
+        $client = new MockHttpClient(new MockResponse('', [
+            'http_code' => 302,
+            'response_headers' => ['location' => 'http://127.0.0.1/latest/meta-data'],
+        ]));
+        $fetcher = new LinkTitleFetcher($client, new NullLogger());
+
+        self::assertNull($fetcher->fetch('http://93.184.216.34/umleitung'));
+        self::assertSame(1, $client->getRequestsCount(), 'the redirect target must not be requested at all');
+    }
+
+    public function testRelativeRedirectIsFollowedAndResolved(): void
+    {
+        $responses = [
+            new MockResponse('', ['http_code' => 302, 'response_headers' => ['location' => '/landing']]),
+            new MockResponse('<html><head><title>Zielseite</title></head></html>', [
+                'response_headers' => ['content-type' => 'text/html; charset=utf-8'],
+            ]),
+        ];
+        $client = new MockHttpClient($responses);
+        $fetcher = new LinkTitleFetcher($client, new NullLogger());
+
+        self::assertSame('Zielseite', $fetcher->fetch('http://93.184.216.34/tief/start'));
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
     private function fetcherFor(string $body, string $contentType = 'text/html; charset=utf-8'): LinkTitleFetcher
     {
         $client = new MockHttpClient(new MockResponse($body, [

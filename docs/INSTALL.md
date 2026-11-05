@@ -185,6 +185,16 @@ beim In-Place-Layout, weil das Hosting so eingerichtet ist.
   verschlüsselte Kopie sind die Seeds nach einem Serververlust unwiederbringlich.
 - **`/healthz`** ist ohne Login erreichbar und meldet nur `{"status":"ok"}` bzw. bei
   Datenbankfehlern `{"status":"error"}` mit HTTP 503 – ohne interne Details.
+- **Titelabruf**: Beim Anlegen holt der Server den Seitentitel des Ziels ab (abschaltbar unter
+  *Admin → Einstellungen*). Der Abruf ist auf 3 s, zwei Weiterleitungen und 256 KB begrenzt und
+  ruft niemals private, Loopback- oder Link-Local-Adressen auf (SSRF-Schutz: DNS-Auflösung wird
+  gegen `FILTER_FLAG_NO_PRIV_RANGE|FILTER_FLAG_NO_RES_RANGE` geprüft). Benötigt ausgehendes
+  HTTP/HTTPS; in Netzen ohne Ausgang bleibt der Titel einfach leer.
+- **CSV-Import**: *Admin → Import*. Kopfzeile ist Pflicht; erkannt werden `code`/`keyword`,
+  `target_url`/`url`, `title`, `domain`, `redirect_type`, `active`, `expires_at` (`clicks` wird
+  ignoriert, damit YOURLS-Exporte direkt passen). Grenzen: 5 MB, 5000 Zeilen pro Lauf,
+  UTF-8 (BOM und Semikolon sind ok). Der erste Schritt zeigt nur eine Vorschau, geschrieben wird
+  erst nach der Bestätigung; vorhandene Kürzel auf der Zieldomain werden übersprungen.
 
 ## Leistung
 

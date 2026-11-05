@@ -13,11 +13,13 @@ action.search: Search
 nav.main: Main navigation
 nav.dashboard: Overview
 nav.links: Links
+nav.tools: Tools
 nav.users: Users
 nav.domains: Domains
 nav.stats: Statistics
 nav.ip_rules: IP lock
 nav.settings: Settings
+nav.import: Import
 nav.profile: Profile
 nav.logout: Sign out
 
