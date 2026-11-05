@@ -43,6 +43,7 @@ final class SettingsType extends AbstractType
                 'label' => 'settings.default_redirect',
                 'choices' => array_combine(array_map(static fn (int $t): string => 'link.redirect.'.$t, Link::REDIRECT_TYPES), Link::REDIRECT_TYPES),
             ])
+            ->add('fetchTitle', CheckboxType::class, ['label' => 'settings.fetch_title', 'required' => false, 'help' => 'settings.fetch_title_help'])
             ->add('tracking', CheckboxType::class, ['label' => 'settings.tracking', 'required' => false, 'help' => 'settings.tracking_help'])
             ->add('trackCountry', CheckboxType::class, ['label' => 'settings.track_country', 'required' => false, 'help' => 'settings.track_country_help'])
             ->add('require2faAdmins', CheckboxType::class, ['label' => 'settings.require_2fa_admins', 'required' => false, 'help' => 'settings.require_2fa_admins_help']);

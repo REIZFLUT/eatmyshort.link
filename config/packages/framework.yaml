@@ -37,3 +37,7 @@ when@test:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+        # No test may reach the network: every HttpClientInterface call answers with a
+        # fixed HTML page (see tests/HttpClient/MockResponseFactory.php).
+        http_client:
+            mock_response_factory: 'App\Tests\HttpClient\MockResponseFactory'

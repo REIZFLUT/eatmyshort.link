@@ -301,6 +301,8 @@ settings.remove_logo: Remove custom logo
 settings.links: Links
 settings.code_length: Length of random codes
 settings.default_redirect: Default redirect
+settings.fetch_title: Fetch page title automatically
+settings.fetch_title_help: When a link is created, the target page's title is read if the field is left empty. No third-party services, just a short request to the target page.
 settings.tracking_title: Tracking
 settings.tracking: Record clicks
 settings.tracking_help: Stored are time, referring site (domain only), device, browser, language and optionally the country. No cookies, no full IP addresses.
