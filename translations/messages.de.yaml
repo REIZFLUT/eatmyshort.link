@@ -253,6 +253,49 @@ user.domains_help: Auf diesen Domains darf der Nutzer Links anlegen. Admins dür
 user.locale: Sprache
 user.locale_browser: wie Browser
 
+import.title: CSV-Import
+import.intro: 'Kurzlinks aus einer CSV-Datei übernehmen – z. B. aus einem YOURLS-Export oder einer Excel-Liste. Die Kopfzeile bestimmt die Spalten.'
+import.file: CSV-Datei
+import.file_help: 'Komma- oder Semikolon-getrennt, UTF-8 (BOM erlaubt), höchstens %size% MB und %rows% Zeilen.'
+import.owner: Ziel-Eigentümer
+import.domain: Domain
+import.skip_duplicates: Doppelte überspringen
+import.skip_duplicates_help: 'Zeilen, deren Kürzel auf der Domain schon vergeben ist, werden übersprungen und gezählt statt als Fehler gemeldet.'
+import.help_columns: 'Erkannte Spalten: code/keyword/kürzel, target_url/url/ziel/long_url, title/titel, domain, redirect_type/redirect, active/aktiv, expires_at/ablauf. Die Spalte klicks/clicks wird ignoriert.'
+import.help_delimiter: 'Das Trennzeichen (Komma oder Semikolon) wird aus der Kopfzeile erkannt.'
+import.preview: Vorschau
+import.run: Importieren
+import.columns: 'Erkannte Spalten:'
+import.no_columns: keine
+import.rows_total: 'Zeilen gesamt: %n%'
+import.summary.valid: 'Gültig: %n%'
+import.summary.invalid: 'Ungültig: %n%'
+import.summary.duplicates: 'Dubletten: %n%'
+import.result.created: 'Angelegt: %n%'
+import.result.skipped: 'Übersprungen: %n%'
+import.result.invalid: 'Fehler: %n%'
+import.preview_hint: 'Es wurde noch nichts gespeichert. Zum Übernehmen die Datei erneut auswählen und „Importieren“ drücken.'
+import.line: Zeile
+import.col.code: Kürzel
+import.col.target: Ziel
+import.col.status: Status
+import.col.note: Hinweis
+import.status.ok: ok
+import.status.error: Fehler
+import.status.duplicate: Dublette
+import.error.no_file: Bitte eine CSV-Datei auswählen.
+import.error.size: 'Die Datei ist zu groß (höchstens 5 MB).'
+import.error.type: 'Nur CSV- oder TXT-Dateien sind erlaubt.'
+import.error.no_header: 'Die Datei hat keine Kopfzeile mit bekannten Spalten.'
+import.error.missing_target: 'Pflichtspalte für die Ziel-URL fehlt (target_url, url, ziel oder long_url).'
+import.error.too_many_rows: 'Die Datei enthält mehr als 5000 Zeilen. Bitte in kleinere Dateien aufteilen.'
+import.error.no_domain: 'Für den gewählten Eigentümer ist keine Domain freigegeben.'
+import.error.domain_unknown: 'Domain „%domain%“ ist nicht eingerichtet.'
+import.error.domain_inactive: 'Domain „%domain%“ ist inaktiv.'
+import.error.domain_not_allowed: 'Domain „%domain%“ ist diesem Eigentümer nicht freigegeben.'
+import.error.bad_date: 'Ungültiges Ablaufdatum „%value%“ (ISO 8601 oder d.m.Y erwartet).'
+import.error.duplicate_code: 'Dieses Kürzel ist auf der Domain schon vergeben.'
+
 domains.intro: Hostnames, unter denen Kurzlinks erreichbar sind. Jede Domain und Subdomain wird einzeln eingetragen.
 domains.new: Domain hinzufügen
 domains.empty_title: Noch keine Domain
@@ -338,6 +381,7 @@ flash.account_link_not_sent: Die E-Mail konnte nicht verschickt werden. Gib den 
 flash.domain_deleted: Domain gelöscht.
 flash.domain_has_links: Auf dieser Domain liegen noch Links. Lösche oder verschiebe sie zuerst – oder schalte die Domain inaktiv.
 flash.domain_saved: Domain gespeichert.
+flash.import_done: Import abgeschlossen.
 flash.invite_done: Passwort gespeichert. Du kannst dich jetzt anmelden.
 flash.reset_done: Neues Passwort gespeichert.
 flash.reset_sent: Falls die Adresse bekannt ist, ist ein Link unterwegs.
