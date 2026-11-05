@@ -44,7 +44,9 @@ final class PagesTest extends AppTestCase
 
         $crawler = $this->client->request('GET', '/profile/totp');
         $secret = str_replace(' ', '', $crawler->filter('code')->text());
-        self::assertNotSame('', $secret);
+        if ('' === $secret) {
+            self::fail('The setup page shows no TOTP secret.');
+        }
         $this->client->request('GET', '/profile/totp/qr.svg');
         self::assertResponseHeaderSame('Content-Type', 'image/svg+xml');
         $this->client->request('GET', '/profile/totp');
