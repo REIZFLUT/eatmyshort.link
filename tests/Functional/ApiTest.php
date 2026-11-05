@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\ApiToken;
+use App\Entity\Click;
 use App\Entity\Link;
 use App\Entity\User;
 
@@ -137,6 +138,80 @@ final class ApiTest extends AppTestCase
         self::assertNotNull($second);
         self::assertNotNull($second->getLastUsedAt());
         self::assertSame($backdated->format('Y-m-d H:i:s'), $second->getLastUsedAt()->format('Y-m-d H:i:s'));
+    }
+
+    public function testExpandResolvesCodeAndFullShortUrl(): void
+    {
+        $user = $this->createUser('api@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $this->createLink($user, $domain, 'messe', 'https://www.example.com/messe');
+        $token = $this->token($user);
+
+        $this->api('GET', '/api/v1/expand?url=messe', $token);
+        self::assertResponseIsSuccessful();
+        $data = $this->json()['data'];
+        self::assertSame('messe', $data['code']);
+        self::assertSame('https://go.example.com/messe', $data['short_url']);
+        self::assertSame('https://www.example.com/messe', $data['target_url']);
+        self::assertTrue($data['active']);
+        self::assertNull($data['expires_at']);
+
+        // Full short URL: the host selects the domain and the code is case-insensitive.
+        $this->api('GET', '/api/v1/expand?url='.urlencode('https://go.example.com/MESSE'), $token);
+        self::assertResponseIsSuccessful();
+        self::assertSame('messe', $this->json()['data']['code']);
+    }
+
+    public function testExpandReportsUnknownAndForeignLinks(): void
+    {
+        $user = $this->createUser('api@example.com');
+        $other = $this->createUser('other@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $this->createLink($other, $domain, 'fremd');
+        $token = $this->token($user);
+
+        $this->api('GET', '/api/v1/expand?url=unbekannt', $token);
+        self::assertResponseStatusCodeSame(404);
+
+        $this->api('GET', '/api/v1/expand?url=fremd', $token);
+        self::assertResponseStatusCodeSame(403);
+
+        $this->api('GET', '/api/v1/expand?url='.urlencode('https://nirgends.example.com/x'), $token);
+        self::assertResponseStatusCodeSame(404);
+
+        $this->api('GET', '/api/v1/expand', $token);
+        self::assertResponseStatusCodeSame(400);
+    }
+
+    public function testGlobalStatsAggregatesOnlyOwnClicks(): void
+    {
+        $user = $this->createUser('api@example.com');
+        $other = $this->createUser('other@example.com');
+        $domain = $this->createDomain('go.example.com', $user, $other);
+        $mine = $this->createLink($user, $domain, 'mein', 'https://www.example.com/mein');
+        $theirs = $this->createLink($other, $domain, 'fremd', 'https://www.example.com/fremd');
+        $token = $this->token($user);
+
+        $at = new \DateTimeImmutable('-1 hour');
+        $this->em()->persist(new Click($mine, $at, 'besucher-a'));
+        $this->em()->persist(new Click($mine, $at->modify('+1 minute'), 'besucher-b'));
+        $this->em()->persist(new Click($theirs, $at, 'besucher-c'));
+        $this->em()->flush();
+        $this->em()->clear();
+
+        $this->api('GET', '/api/v1/stats?days=7', $token);
+        self::assertResponseIsSuccessful();
+        $data = $this->json()['data'];
+        self::assertCount(7, $data['per_day']);
+        self::assertSame(2, $data['totals']['clicks']);
+        self::assertSame(2, $data['totals']['visitors']);
+        self::assertCount(1, $data['top_links']);
+        self::assertSame('mein', $data['top_links'][0]['code']);
+        self::assertSame(2, $data['top_links'][0]['clicks']);
+        self::assertSame('https://go.example.com/mein', $data['top_links'][0]['short_url']);
+
+        $this->api('GET', '/api/v1/stats?days=quatsch', $token);
+        self::assertResponseStatusCodeSame(400);
     }
 
     private function token(User $user): string

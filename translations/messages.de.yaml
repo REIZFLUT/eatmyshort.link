@@ -360,6 +360,8 @@ settings.remove_logo: Eigenes Logo entfernen
 settings.links: Links
 settings.code_length: Länge zufälliger Kürzel
 settings.default_redirect: Standard-Weiterleitung
+settings.fetch_title: Seitentitel automatisch holen
+settings.fetch_title_help: Beim Anlegen wird der Titel der Zielseite gelesen, sofern das Feld leer bleibt. Keine fremden Dienste, nur ein kurzer Abruf der Zielseite.
 settings.tracking_title: Tracking
 settings.tracking: Klicks erfassen
 settings.tracking_help: Gespeichert werden Zeitpunkt, Herkunftsseite (nur Domain), Gerät, Browser, Sprache und auf Wunsch das Land. Keine Cookies, keine vollständigen IP-Adressen.

@@ -9,3 +9,9 @@ services:
 
     App\:
         resource: '../src/'
+
+when@test:
+    services:
+        # The http_client mock_response_factory references this id; tests/ is not part of
+        # the App\ resource above, so it needs an explicit definition.
+        App\Tests\HttpClient\MockResponseFactory: ~

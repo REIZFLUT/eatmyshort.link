@@ -9,6 +9,7 @@ use App\Entity\Link;
 use App\Entity\LinkLocalisation;
 use App\Entity\User;
 use App\Link\LinkManager;
+use App\Repository\ClickRepository;
 use App\Repository\DomainRepository;
 use App\Repository\LinkRepository;
 use App\Security\AdminAccess;
@@ -23,6 +24,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -157,6 +159,100 @@ final class LinkApiController extends AbstractController
                     'visitors' => $p['visitors'],
                 ], $result['series']),
                 'breakdowns' => $result['breakdowns'],
+            ],
+        ]);
+    }
+
+    /**
+     * YOURLS-compatible resolution of a short URL or a bare code to its target. Counts no
+     * click and never redirects; permissions match reading a link (owner or admin).
+     */
+    #[Route('/expand', name: 'api_expand', methods: ['GET'])]
+    public function expand(Request $request, #[CurrentUser] User $user, LinkRepository $links): JsonResponse
+    {
+        $this->throttle($user);
+
+        $url = trim($request->query->getString('url'));
+        if ('' === $url) {
+            throw new BadRequestHttpException('Parameter "url" is required.');
+        }
+
+        $parts = parse_url($url);
+        $scheme = \is_array($parts) ? mb_strtolower((string) ($parts['scheme'] ?? '')) : '';
+        $host = \is_array($parts) ? (string) ($parts['host'] ?? '') : '';
+        $isFullUrl = \in_array($scheme, ['http', 'https'], true) && '' !== $host;
+
+        if ($isFullUrl) {
+            $domain = $this->domains->findOneByHostname($host);
+            $code = trim((string) parse_url($url, \PHP_URL_PATH), '/');
+        } else {
+            $code = $url;
+            $domainHost = trim($request->query->getString('domain'));
+            $domain = '' !== $domainHost ? $this->domains->findOneByHostname($domainHost) : null;
+            if (null === $domain && '' === $domainHost) {
+                // No domain given: the user's default domain (first of the usable ones).
+                $domain = $this->domains->findUsableBy($user, $this->adminAccess->isAdmin($user))[0] ?? null;
+            }
+        }
+
+        // An unknown or inactive domain is reported like an unknown link (404) below.
+        if (null === $domain || !$domain->isActive() || '' === $code) {
+            throw new NotFoundHttpException('Unknown short link.');
+        }
+
+        $link = $links->findForRedirectByHost($domain->getHostname(), mb_strtolower($code));
+        if (null === $link) {
+            throw new NotFoundHttpException('Unknown short link.');
+        }
+        $this->denyAccessUnlessGranted(LinkVoter::MANAGE, $link);
+
+        return $this->json(['data' => [
+            'id' => $link->getId(),
+            'code' => $link->getCode(),
+            'short_url' => $link->getShortUrl(),
+            'target_url' => $link->getTargetUrl(),
+            'active' => $link->isActive(),
+            'expires_at' => $link->getExpiresAt()?->format(\DATE_ATOM),
+        ]]);
+    }
+
+    /**
+     * Account-wide statistics (all links for admins from allowed addresses) for the last
+     * N days, plus the most clicked links of the same period and scope.
+     */
+    #[Route('/stats', name: 'api_stats', methods: ['GET'])]
+    public function globalStats(Request $request, #[CurrentUser] User $user, StatsBuilder $stats, ClickRepository $clicks): JsonResponse
+    {
+        $this->throttle($user);
+
+        $days = $request->query->getInt('days', 30);
+        if (!\in_array($days, Period::CHOICES, true)) {
+            throw new BadRequestHttpException(\sprintf('Parameter "days" must be one of: %s.', implode(', ', Period::CHOICES)));
+        }
+        $period = Period::lastDays($days);
+        $owner = $this->adminAccess->isAdmin($user) ? null : $user;
+        $result = $stats->build($period, owner: $owner);
+
+        $topLinks = array_map(static fn (array $row): array => [
+            'id' => $row['link']->getId(),
+            'code' => $row['link']->getCode(),
+            'short_url' => $row['link']->getShortUrl(),
+            'target_url' => $row['link']->getTargetUrl(),
+            'clicks' => $row['clicks'],
+        ], $clicks->topLinks($period->from, $period->to, $owner, 10));
+
+        return $this->json([
+            'data' => [
+                'from' => $period->from->format('Y-m-d'),
+                'to' => $period->to->format('Y-m-d'),
+                'totals' => $result['totals'],
+                'per_day' => array_map(static fn (array $day): array => [
+                    'day' => $day['day']->format('Y-m-d'),
+                    'clicks' => $day['clicks'],
+                    'visitors' => $day['visitors'],
+                ], $result['series']),
+                'breakdowns' => $result['breakdowns'],
+                'top_links' => $topLinks,
             ],
         ]);
     }

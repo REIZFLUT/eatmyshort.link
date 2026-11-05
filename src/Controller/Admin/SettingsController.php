@@ -25,6 +25,7 @@ final class SettingsController extends AbstractController
             'accent' => $settings->getString(Settings::ACCENT),
             'codeLength' => $settings->getInt(Settings::CODE_LENGTH),
             'defaultRedirect' => $settings->getInt(Settings::DEFAULT_REDIRECT),
+            'fetchTitle' => $settings->getBool(Settings::LINK_FETCH_TITLE),
             'tracking' => $settings->getBool(Settings::TRACKING),
             'trackCountry' => $settings->getBool(Settings::TRACK_COUNTRY),
             'require2faAdmins' => $settings->getBool(Settings::REQUIRE_2FA_ADMINS),
@@ -32,13 +33,14 @@ final class SettingsController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{title: string, accent: string, logo: ?UploadedFile, removeLogo: bool, codeLength: int, defaultRedirect: int, tracking: bool, trackCountry: bool, require2faAdmins: bool} $data */
+            /** @var array{title: string, accent: string, logo: ?UploadedFile, removeLogo: bool, codeLength: int, defaultRedirect: int, fetchTitle: bool, tracking: bool, trackCountry: bool, require2faAdmins: bool} $data */
             $data = $form->getData();
             $values = [
                 Settings::TITLE => $data['title'],
                 Settings::ACCENT => preg_match('/^#[0-9a-f]{6}$/i', $data['accent']) ? strtolower($data['accent']) : Settings::DEFAULTS[Settings::ACCENT],
                 Settings::CODE_LENGTH => $data['codeLength'],
                 Settings::DEFAULT_REDIRECT => $data['defaultRedirect'],
+                Settings::LINK_FETCH_TITLE => $data['fetchTitle'],
                 Settings::TRACKING => $data['tracking'],
                 Settings::TRACK_COUNTRY => $data['trackCountry'],
                 Settings::REQUIRE_2FA_ADMINS => $data['require2faAdmins'],

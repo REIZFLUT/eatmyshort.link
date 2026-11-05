@@ -22,6 +22,7 @@ final class Settings implements ResetInterface
     public const string REQUIRE_2FA_ADMINS = 'security.require_2fa_admins';
     public const string CODE_LENGTH = 'links.code_length';
     public const string DEFAULT_REDIRECT = 'links.default_redirect_type';
+    public const string LINK_FETCH_TITLE = 'links.fetch_title';
     public const string TRACKING = 'tracking.enabled';
     public const string TRACK_COUNTRY = 'tracking.country';
 
@@ -33,6 +34,7 @@ final class Settings implements ResetInterface
         self::REQUIRE_2FA_ADMINS => '0',
         self::CODE_LENGTH => '6',
         self::DEFAULT_REDIRECT => '302',
+        self::LINK_FETCH_TITLE => '1',
         self::TRACKING => '1',
         self::TRACK_COUNTRY => '1',
     ];

@@ -17,7 +17,9 @@ und Nutzer (`429` mit `Retry-After`).
 | GET | `/links/{id}` | Link lesen |
 | PATCH | `/links/{id}` | Link ändern (nur übergebene Felder) |
 | DELETE | `/links/{id}` | Link löschen (`204`) |
-| GET | `/links/{id}/stats?days=7\|30\|90\|365` | Statistik |
+| GET | `/links/{id}/stats?days=7\|30\|90\|365` | Statistik eines Links |
+| GET | `/expand?url=&domain=` | Kurz-URL oder Code auflösen (YOURLS-kompatibel) |
+| GET | `/stats?days=7\|30\|90\|365` | Gesamtstatistik des Kontos |
 
 ## Link-Felder
 
@@ -47,9 +49,48 @@ curl -X POST https://links.example.com/api/v1/links \
 {"data": {"id": 12, "short_url": "https://go.example.com/messe", "code": "messe", "target_url": "https://www.example.com/messe", "redirect_type": 302, "active": true, "localisations": {}, "clicks": 0, "…": "…"}}
 ```
 
+## Kurz-URL auflösen: `/expand`
+
+YOURLS-kompatibel: liefert das Ziel eines Kürzels, ohne einen Klick zu zählen und ohne
+weiterzuleiten. `url` ist entweder eine vollständige Kurz-URL (`http`/`https`, der Host
+wird zur Domain aufgelöst) oder ein blanker Code. Bei einem blanken Code kann `domain`
+den Hostname nennen; ohne `domain` gilt die Standard-Domain des Nutzers.
+
+```bash
+curl "https://links.example.com/api/v1/expand?url=https://go.example.com/messe" \
+  -H "Authorization: Bearer ***"
+curl "https://links.example.com/api/v1/expand?url=messe&domain=go.example.com" \
+  -H "Authorization: Bearer ***"
+```
+
+```json
+{"data": {"id": 12, "code": "messe", "short_url": "https://go.example.com/messe", "target_url": "https://www.example.com/messe", "active": true, "expires_at": null}}
+```
+
+Fehler: `400` ohne `url`, `403` fremder Link, `404` unbekannter Code oder unbekannte bzw.
+inaktive Domain.
+
+## Gesamtstatistik: `/stats`
+
+Statistik aller eigenen Links (Admins: aller Links) für die letzten `days` Tage. Erlaubt
+sind `7`, `30`, `90` und `365` (Standard `30`); jeder andere Wert ergibt `400`. `totals`
+und `per_day` zählen nur menschliche Klicks (Bots ausgeschlossen); `top_links` sind die
+zehn meistgeklickten Links im selben Zeitraum und Scope.
+
+```bash
+curl "https://links.example.com/api/v1/stats?days=30" -H "Authorization: Bearer ***"
+```
+
+```json
+{"data": {"from": "2026-10-07", "to": "2026-11-05", "totals": {"clicks": 128, "visitors": 97}, "per_day": [{"day": "2026-10-07", "clicks": 4, "visitors": 3}], "breakdowns": {"referrerHost": [{"value": "www.example.com", "clicks": 12}], "countryCode": [], "deviceType": [], "browser": [], "os": [], "language": []}, "top_links": [{"id": 12, "code": "messe", "short_url": "https://go.example.com/messe", "target_url": "https://www.example.com/messe", "clicks": 42}]}}
+```
+
+Fehler: `400` bei einem `days`-Wert außerhalb der Liste.
+
 ## Fehler
 
 - `401` – Token fehlt, ist ungültig, abgelaufen oder der Nutzer gesperrt
 - `403` – Link gehört jemand anderem
-- `400` – Body ist kein JSON-Objekt
+- `404` – unbekannter Link/Code oder unbekannte bzw. inaktive Domain
+- `400` – Body ist kein JSON-Objekt oder ein Parameter hat einen ungültigen Wert
 - `422` – Validierung: `{"error": "validation_failed", "violations": [{"field": "code", "message": "…"}]}`
