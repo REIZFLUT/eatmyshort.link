@@ -1,0 +1,14 @@
+url.invalid: Please enter a complete http(s) address.
+url.loop: The target must not point to one of our own short-link or admin domains.
+code.format: Only lowercase letters, digits, "-" and "_" (max. 64 characters, starting with a letter or digit).
+code.reserved: '"{{ code }}" is reserved.'
+link.code.taken: This code is already taken on this domain.
+ip.invalid: Not a valid IP address or CIDR range.
+ip_rule.cidr.taken: This entry already exists.
+user.email.taken: This e-mail address is already in use.
+domain.hostname.taken: This domain is already registered.
+domain.hostname.invalid: Not a valid hostname.
+domain.hostname.is_admin: This hostname serves the admin UI (APP_ADMIN_HOSTS) and cannot be a short-link domain.
+localisation.language.invalid: Use a language code like "en" or "de-at".
+password.current_wrong: The current password is wrong.
+password.mismatch: The passwords do not match.

@@ -4,6 +4,8 @@ framework:
         paths:
             - assets/
         missing_import_mode: strict
+        # All supported browsers understand import maps; don't pull a shim from a public CDN.
+        importmap_polyfill: false
 
 when@prod:
     framework:

@@ -11,6 +11,7 @@ use Scheb\TwoFactorBundle\Security\Authentication\Token\TwoFactorTokenInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -56,8 +57,9 @@ final readonly class TwoFactorRequirementListener
             return;
         }
 
-        if ($request->hasSession()) {
-            $request->getSession()->getFlashBag()->add('warning', 'flash.2fa_required');
+        $session = $request->hasSession() ? $request->getSession() : null;
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add('warning', 'flash.2fa_required');
         }
         $event->setResponse(new RedirectResponse($this->urls->generate('app_profile_security')));
     }

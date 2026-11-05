@@ -1,0 +1,63 @@
+{% use 'form_div_layout.html.twig' %}
+
+{%- block form_row -%}
+    {%- set widget_attr = {} -%}
+    {%- if help is not empty -%}
+        {%- set widget_attr = {attr: {'aria-describedby': id ~ '_help'}} -%}
+    {%- endif -%}
+    <div class="field{% if (not compound or force_error|default(false)) and not valid %} has-error{% endif %}">
+        {{- form_label(form) -}}
+        {{- form_widget(form, widget_attr) -}}
+        {{- form_help(form) -}}
+        {{- form_errors(form) -}}
+    </div>
+{%- endblock form_row -%}
+
+{%- block checkbox_row -%}
+    <div class="check">
+        {{- form_widget(form) -}}
+        <div>
+            {{- form_label(form) -}}
+            {{- form_help(form) -}}
+            {{- form_errors(form) -}}
+        </div>
+    </div>
+{%- endblock checkbox_row -%}
+
+{%- block checkbox_label -%}
+    {%- if label is not same as(false) -%}
+        <label for="{{ id }}">{{ label|trans(label_translation_parameters, translation_domain) }}</label>
+    {%- endif -%}
+{%- endblock checkbox_label -%}
+
+{%- block choice_widget_expanded -%}
+    <div class="choices" {{ block('widget_container_attributes') }}>
+        {%- for child in form %}
+            <div class="check">
+                {{- form_widget(child) -}}
+                <label for="{{ child.vars.id }}">{{ child.vars.label|trans(child.vars.label_translation_parameters, choice_translation_domain) }}</label>
+            </div>
+        {% endfor -%}
+    </div>
+{%- endblock choice_widget_expanded -%}
+
+{%- block form_help -%}
+    {%- if help is not empty -%}
+        <div id="{{ id }}_help" class="help">{{ help|trans(help_translation_parameters, translation_domain) }}</div>
+    {%- endif -%}
+{%- endblock form_help -%}
+
+{%- block form_errors -%}
+    {%- if errors|length > 0 -%}
+        <ul class="errors{% if form.parent is null %} form-errors{% endif %}">
+            {%- for error in errors -%}
+                <li>{{ error.message }}</li>
+            {%- endfor -%}
+        </ul>
+    {%- endif -%}
+{%- endblock form_errors -%}
+
+{%- block widget_attributes -%}
+    {%- if not valid %}{% set attr = attr|merge({'aria-invalid': 'true'}) %}{% endif -%}
+    {{- parent() -}}
+{%- endblock widget_attributes -%}

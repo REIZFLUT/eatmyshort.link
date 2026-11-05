@@ -122,6 +122,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, TwoFact
 
     public function getUserIdentifier(): string
     {
+        if ('' === $this->email) {
+            throw new \LogicException('A user without e-mail address has no identifier.');
+        }
+
         return $this->email;
     }
 
@@ -146,7 +150,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, TwoFact
 
     public function setAdmin(bool $admin): static
     {
-        $this->setRoles($admin ? [...$this->roles, self::ROLE_ADMIN] : array_diff($this->roles, [self::ROLE_ADMIN]));
+        $this->setRoles($admin ? [...$this->roles, self::ROLE_ADMIN] : array_values(array_diff($this->roles, [self::ROLE_ADMIN])));
 
         return $this;
     }

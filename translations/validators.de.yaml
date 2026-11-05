@@ -1,0 +1,14 @@
+url.invalid: Bitte eine vollständige http(s)-Adresse angeben.
+url.loop: Das Ziel darf nicht auf eine eigene Kurzlink- oder Verwaltungsdomain zeigen.
+code.format: Nur Kleinbuchstaben, Ziffern, „-" und „_" (max. 64 Zeichen, am Anfang Buchstabe oder Ziffer).
+code.reserved: '„{{ code }}" ist reserviert.'
+link.code.taken: Dieses Kürzel ist auf dieser Domain schon vergeben.
+ip.invalid: Keine gültige IP-Adresse oder CIDR-Angabe.
+ip_rule.cidr.taken: Dieser Eintrag existiert bereits.
+user.email.taken: Diese E-Mail-Adresse wird schon verwendet.
+domain.hostname.taken: Diese Domain ist schon eingetragen.
+domain.hostname.invalid: Kein gültiger Hostname.
+domain.hostname.is_admin: Dieser Hostname dient der Verwaltung (APP_ADMIN_HOSTS) und kann keine Kurzlink-Domain sein.
+localisation.language.invalid: Sprachcode wie „en" oder „de-at" angeben.
+password.current_wrong: Das aktuelle Passwort stimmt nicht.
+password.mismatch: Die Passwörter stimmen nicht überein.

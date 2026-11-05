@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.dashboard'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'dashboard.hello'|trans({'%name%': app.user.displayName}) }}</h1>
+            <p class="sub">{{ 'dashboard.summary'|trans({'%count%': link_count}) }}</p>
+        </div>
+    </div>
+
+    <div class="stack">
+        <section class="card">
+            <h2>{{ 'dashboard.shorten'|trans }}</h2>
+            {% if quick_form %}
+                {{ form_start(quick_form, {attr: {class: 'shorten', novalidate: 'novalidate'}}) }}
+                    {{ form_row(quick_form.targetUrl) }}
+                    {{ form_row(quick_form.domain) }}
+                    {{ form_row(quick_form.code) }}
+                    <button type="submit" class="btn btn-primary">{{ 'dashboard.shorten_submit'|trans }}</button>
+                {{ form_end(quick_form) }}
+                <p class="small muted">{{ 'dashboard.shorten_hint'|trans }} <a href="{{ path('app_link_new') }}">{{ 'dashboard.more_options'|trans }}</a></p>
+            {% else %}
+                <p class="muted">{{ 'flash.no_domains'|trans }}</p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>{{ 'dashboard.your_clicks'|trans }}</h2>
+            {{ include('_partials/stats.html.twig', {stats: stats}) }}
+        </section>
+
+        <section class="card flush">
+            <div class="card-head card-pad">
+                <h2>{{ 'dashboard.recent'|trans }}</h2>
+                <a href="{{ path('app_links', {mine: 1}) }}" class="btn btn-sm btn-ghost">{{ 'dashboard.all_links'|trans }} →</a>
+            </div>
+            {{ include('link/_table.html.twig', {links: recent, show_owner: false}) }}
+        </section>
+    </div>
+{% endblock %}

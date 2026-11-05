@@ -14,9 +14,10 @@ use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
  * Sets the SQLite pragmas the app relies on for every new connection:
  * WAL (readers never block the click writer), a busy timeout instead of
  * immediate "database is locked" errors, and enforced foreign keys.
- * Other drivers pass through untouched.
+ * Other drivers pass through untouched. High priority = innermost middleware, so the
+ * pragmas reach the real connection before anything else (e.g. a test transaction) runs.
  */
-#[AsMiddleware]
+#[AsMiddleware(priority: 1000)]
 final class SqlitePragmaMiddleware implements Middleware
 {
     public const array PRAGMAS = [
@@ -33,7 +34,12 @@ final class SqlitePragmaMiddleware implements Middleware
             {
                 $connection = parent::connect($params);
 
-                if (\in_array($params['driver'] ?? null, ['pdo_sqlite', 'sqlite3'], true)) {
+                $native = $connection->getNativeConnection();
+                // A connection handed out inside an open transaction (e.g. the test suite's static
+                // connection) already carries the pragmas, and SQLite refuses to change them there.
+                $inTransaction = $native instanceof \PDO && $native->inTransaction();
+
+                if (!$inTransaction && \in_array($params['driver'] ?? null, ['pdo_sqlite', 'sqlite3'], true)) {
                     foreach (SqlitePragmaMiddleware::PRAGMAS as $pragma => $value) {
                         $connection->exec(\sprintf('PRAGMA %s = %s', $pragma, $value));
                     }

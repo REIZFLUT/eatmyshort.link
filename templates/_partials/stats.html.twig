@@ -1,0 +1,51 @@
+{# Expects: stats (StatsBuilder result), optional periods + route params for the period switch #}
+<div class="stack">
+    <div class="stats">
+        <div class="stat"><div class="value">{{ stats.totals.clicks|number_format(0, ',', '.') }}</div><div class="label">{{ 'stats.clicks'|trans }}</div></div>
+        <div class="stat"><div class="value">{{ stats.totals.visitors|number_format(0, ',', '.') }}</div><div class="label">{{ 'stats.visitors'|trans }}</div></div>
+        <div class="stat"><div class="value">{{ stats.period.days }}</div><div class="label">{{ 'stats.days'|trans }}</div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <h2>{{ 'stats.per_day'|trans }}</h2>
+            {% if periods is defined %}
+                <div class="segmented">
+                    {% for days in periods %}
+                        <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({days: days})) }}" class="{{ stats.period.days == days ? 'active' }}">{{ 'stats.period_days'|trans({'%days%': days}) }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        {{ bar_chart(stats.series, 'stats.per_day'|trans) }}
+        <p class="small muted">{{ 'stats.chart_hint'|trans }}</p>
+    </div>
+
+    <div class="grid grid-3">
+        {% for field, rows in stats.breakdowns %}
+            <div class="card">
+                <h3>{{ ('stats.breakdown.' ~ field)|trans }}</h3>
+                {% if rows is empty %}
+                    <p class="muted small">{{ 'stats.no_data'|trans }}</p>
+                {% else %}
+                    {% set max = rows|first.clicks %}
+                    <ul class="breakdown">
+                        {% for row in rows %}
+                            <li>
+                                <span class="truncate">
+                                    {% if row.value is null %}<span class="muted">{{ 'stats.unknown'|trans }}</span>
+                                    {% elseif field == 'countryCode' %}{{ row.value|country_name(app.request.locale) }}
+                                    {% elseif field == 'language' %}{{ row.value|language_name(app.request.locale) }}
+                                    {% elseif field == 'deviceType' %}{{ ('device.' ~ row.value)|trans }}
+                                    {% else %}{{ row.value }}{% endif %}
+                                </span>
+                                <span class="count">{{ row.clicks|number_format(0, ',', '.') }}</span>
+                                <span class="bar w{{ max > 0 ? (row.clicks / max * 20)|round : 0 }}"></span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>

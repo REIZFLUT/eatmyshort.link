@@ -1,0 +1,10 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'links.new'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head"><h1>{{ 'links.new'|trans }}</h1></div>
+        {{ include('link/_form.html.twig', {submit_label: 'links.create', cancel_url: path('app_links')}) }}
+    </div>
+{% endblock %}

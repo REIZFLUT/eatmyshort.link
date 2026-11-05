@@ -1,0 +1,271 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\Api;
+
+use App\Entity\Domain;
+use App\Entity\Link;
+use App\Entity\LinkLocalisation;
+use App\Entity\User;
+use App\Link\LinkManager;
+use App\Repository\DomainRepository;
+use App\Repository\LinkRepository;
+use App\Security\Voter\DomainVoter;
+use App\Security\Voter\LinkVoter;
+use App\Stats\Period;
+use App\Stats\StatsBuilder;
+use Doctrine\ORM\Tools\Pagination\Paginator;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\ConstraintViolationListInterface;
+
+/**
+ * REST API v1, authenticated with personal access tokens ("Authorization: Bearer emsl_…").
+ * See docs/API.md.
+ */
+#[Route('/api/v1', format: 'json')]
+final class LinkApiController extends AbstractController
+{
+    private const int PER_PAGE = 50;
+
+    public function __construct(
+        private readonly LinkManager $manager,
+        private readonly DomainRepository $domains,
+        #[Autowire(service: 'limiter.api')]
+        private readonly RateLimiterFactoryInterface $apiLimiter,
+    ) {
+    }
+
+    #[Route('/domains', name: 'api_domains', methods: ['GET'])]
+    public function domains(#[CurrentUser] User $user): JsonResponse
+    {
+        $this->throttle($user);
+
+        return $this->json(['data' => array_map(static fn (Domain $d): array => [
+            'id' => $d->getId(),
+            'hostname' => $d->getHostname(),
+            'default' => $d->isDefault(),
+        ], $this->domains->findUsableBy($user))]);
+    }
+
+    #[Route('/links', name: 'api_links', methods: ['GET'])]
+    public function list(Request $request, #[CurrentUser] User $user, LinkRepository $links): JsonResponse
+    {
+        $this->throttle($user);
+        $page = max(1, $request->query->getInt('page', 1));
+        $domainId = $request->query->getInt('domain');
+        $query = $links->searchQuery($user, $request->query->getString('q'), $domainId > 0 ? $this->domains->find($domainId) : null)
+            ->setFirstResult(($page - 1) * self::PER_PAGE)
+            ->setMaxResults(self::PER_PAGE);
+        $paginator = new Paginator($query, fetchJoinCollection: false);
+
+        return $this->json([
+            'data' => array_map(self::normalize(...), iterator_to_array($paginator, false)),
+            'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => \count($paginator)],
+        ]);
+    }
+
+    #[Route('/links', name: 'api_link_create', methods: ['POST'])]
+    public function create(Request $request, #[CurrentUser] User $user): JsonResponse
+    {
+        $this->throttle($user);
+        $data = $this->payload($request);
+        $link = new Link($user);
+        $this->manager->applyDefaults($link);
+
+        $usable = $this->domains->findUsableBy($user);
+        $link->setDomain($usable[0] ?? null);
+        $error = $this->apply($link, $data);
+        if (null !== $error) {
+            return $error;
+        }
+
+        $violations = $this->manager->validate($link);
+        if (\count($violations) > 0) {
+            return $this->violations($violations);
+        }
+        $this->manager->save($link);
+
+        return $this->json(['data' => self::normalize($link)], Response::HTTP_CREATED);
+    }
+
+    #[Route('/links/{id}', name: 'api_link_show', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    #[IsGranted(LinkVoter::MANAGE, 'link')]
+    public function show(Link $link, #[CurrentUser] User $user): JsonResponse
+    {
+        $this->throttle($user);
+
+        return $this->json(['data' => self::normalize($link)]);
+    }
+
+    #[Route('/links/{id}', name: 'api_link_update', requirements: ['id' => Requirement::DIGITS], methods: ['PATCH'])]
+    #[IsGranted(LinkVoter::MANAGE, 'link')]
+    public function update(Request $request, Link $link, #[CurrentUser] User $user): JsonResponse
+    {
+        $this->throttle($user);
+        $error = $this->apply($link, $this->payload($request));
+        if (null !== $error) {
+            return $error;
+        }
+        $violations = $this->manager->validate($link);
+        if (\count($violations) > 0) {
+            return $this->violations($violations);
+        }
+        $this->manager->save($link);
+
+        return $this->json(['data' => self::normalize($link)]);
+    }
+
+    #[Route('/links/{id}', name: 'api_link_delete', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
+    #[IsGranted(LinkVoter::MANAGE, 'link')]
+    public function delete(Link $link, #[CurrentUser] User $user): Response
+    {
+        $this->throttle($user);
+        $this->manager->delete($link);
+
+        return new Response(status: Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/links/{id}/stats', name: 'api_link_stats', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    #[IsGranted(LinkVoter::MANAGE, 'link')]
+    public function stats(Request $request, Link $link, #[CurrentUser] User $user, StatsBuilder $stats): JsonResponse
+    {
+        $this->throttle($user);
+        $result = $stats->build(Period::lastDays($request->query->getInt('days', 30)), link: $link);
+
+        return $this->json([
+            'data' => [
+                'from' => $result['period']->from->format('Y-m-d'),
+                'to' => $result['period']->to->format('Y-m-d'),
+                'totals' => $result['totals'],
+                'per_day' => array_map(static fn (array $p): array => [
+                    'day' => $p['day']->format('Y-m-d'),
+                    'clicks' => $p['clicks'],
+                    'visitors' => $p['visitors'],
+                ], $result['series']),
+                'breakdowns' => $result['breakdowns'],
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public static function normalize(Link $link): array
+    {
+        return [
+            'id' => $link->getId(),
+            'short_url' => $link->getShortUrl(),
+            'domain' => $link->getDomain()?->getHostname(),
+            'code' => $link->getCode(),
+            'target_url' => $link->getTargetUrl(),
+            'title' => $link->getTitle(),
+            'redirect_type' => $link->getRedirectType(),
+            'active' => $link->isActive(),
+            'expires_at' => $link->getExpiresAt()?->format(\DATE_ATOM),
+            'localisations' => (object) $link->getLocalisedTargets(),
+            'clicks' => $link->getClickCount(),
+            'last_click_at' => $link->getLastClickAt()?->format(\DATE_ATOM),
+            'owner' => $link->getOwner()->getEmail(),
+            'created_at' => $link->getCreatedAt()->format(\DATE_ATOM),
+            'updated_at' => $link->getUpdatedAt()->format(\DATE_ATOM),
+        ];
+    }
+
+    /** @param array<string, mixed> $data */
+    private function apply(Link $link, array $data): ?JsonResponse
+    {
+        if (\array_key_exists('domain', $data)) {
+            $domain = \is_int($data['domain']) ? $this->domains->find($data['domain']) : $this->domains->findOneByHostname((string) $data['domain']);
+            if (null === $domain || !$this->isGranted(DomainVoter::USE, $domain)) {
+                return $this->error('domain', 'Unknown domain or not allowed for this user.');
+            }
+            $link->setDomain($domain);
+        } elseif (null === $link->getDomain()) {
+            return $this->error('domain', 'No domain available for this user.');
+        }
+
+        if (\array_key_exists('code', $data)) {
+            $link->setCode(\is_string($data['code']) ? $data['code'] : '');
+        }
+        if (\array_key_exists('target_url', $data)) {
+            $link->setTargetUrl(\is_string($data['target_url']) ? $data['target_url'] : '');
+        }
+        if (\array_key_exists('title', $data)) {
+            $link->setTitle(\is_string($data['title']) ? $data['title'] : null);
+        }
+        if (\array_key_exists('redirect_type', $data)) {
+            $link->setRedirectType(\is_int($data['redirect_type']) ? $data['redirect_type'] : 0);
+        }
+        if (\array_key_exists('active', $data)) {
+            $link->setActive(true === $data['active']);
+        }
+        if (\array_key_exists('expires_at', $data)) {
+            try {
+                $link->setExpiresAt(null === $data['expires_at'] ? null : new \DateTimeImmutable((string) $data['expires_at']));
+            } catch (\Exception) {
+                return $this->error('expires_at', 'Invalid date, use ISO 8601.');
+            }
+        }
+        if (\array_key_exists('localisations', $data)) {
+            if (!\is_array($data['localisations'])) {
+                return $this->error('localisations', 'Expected an object like {"en": "https://…"}.');
+            }
+            foreach ($link->getLocalisations()->toArray() as $existing) {
+                $link->removeLocalisation($existing);
+            }
+            foreach ($data['localisations'] as $language => $url) {
+                $link->addLocalisation(new LinkLocalisation()->setLanguage((string) $language)->setTargetUrl(\is_string($url) ? $url : ''));
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array<string, mixed> */
+    private function payload(Request $request): array
+    {
+        try {
+            return $request->toArray();
+        } catch (\Throwable) {
+            throw new BadRequestHttpException('Request body must be a JSON object.');
+        }
+    }
+
+    private function throttle(User $user): void
+    {
+        $limit = $this->apiLimiter->create('user-'.$user->getId())->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException($limit->getRetryAfter()->getTimestamp() - time(), 'Rate limit exceeded.');
+        }
+    }
+
+    private function error(string $field, string $message): JsonResponse
+    {
+        return $this->json(['error' => 'validation_failed', 'violations' => [['field' => $field, 'message' => $message]]], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    private function violations(ConstraintViolationListInterface $violations): JsonResponse
+    {
+        $list = [];
+        foreach ($violations as $violation) {
+            $list[] = ['field' => self::snake($violation->getPropertyPath()), 'message' => (string) $violation->getMessage()];
+        }
+
+        return $this->json(['error' => 'validation_failed', 'violations' => $list], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    private static function snake(string $path): string
+    {
+        return strtolower((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $path));
+    }
+}

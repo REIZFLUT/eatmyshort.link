@@ -1,0 +1,6 @@
+{% extends 'redirect/_layout.html.twig' %}
+{% block title %}{{ 'redirect.unknown_domain.title'|trans }}{% endblock %}
+{% block content %}
+    <h2>{{ 'redirect.unknown_domain.title'|trans }}</h2>
+    <p>{{ 'redirect.unknown_domain.text'|trans({'%host%': app.request.host}) }}</p>
+{% endblock %}

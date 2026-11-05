@@ -1,0 +1,354 @@
+action.back_to_login: Back to sign-in
+action.cancel: Cancel
+action.copied: Copied ✓
+action.copy: Copy
+action.delete: Delete
+action.edit: Edit
+action.remove: Remove
+action.revoke: Revoke
+action.save: Save
+action.search: Search
+
+nav.main: Main navigation
+nav.dashboard: Overview
+nav.links: Links
+nav.users: Users
+nav.domains: Domains
+nav.stats: Statistics
+nav.ip_rules: IP lock
+nav.settings: Settings
+nav.profile: Profile
+nav.logout: Sign out
+
+locale.de: Deutsch
+locale.en: English
+
+login.title: Sign in
+login.or_password: or with password
+login.password: Password
+login.submit: Sign in
+login.forgot: Forgot your password?
+
+passkey.title: Passkeys
+passkey.login: Sign in with a passkey
+passkey.login_failed: Signing in with a passkey did not work.
+passkey.register_failed: The passkey could not be saved.
+passkey.aborted: Cancelled, or no matching passkey was found.
+passkey.unsupported: This browser does not support passkeys (or the page is not served over HTTPS).
+passkey.add: Add passkey
+passkey.intro: Passkeys (Face ID, Touch ID, Windows Hello, security keys) replace password and two-factor code. Signing in with them is phishing-resistant.
+passkey.none: No passkey yet.
+passkey.name: Name
+passkey.created: Created
+passkey.last_used: Last used
+passkey.synced: synced
+passkey.delete_confirm: Really delete this passkey?
+passkey.count: '{1} 1 passkey|]1,Inf[ %count% passkeys'
+
+totp.title: Two-factor code (TOTP)
+totp.intro: After a password sign-in you are also asked for a code from an authenticator app (e.g. Aegis, Google Authenticator, 1Password). Passkey sign-ins skip the code.
+totp.on: on
+totp.off: off
+totp.enable: Set up two-factor code
+totp.disable: Turn off
+totp.disable_confirm: Really turn off the two-factor code?
+totp.step_scan: Scan the QR code with your authenticator app.
+totp.step_confirm: Enter the 6-digit code it shows.
+totp.manual: 'Or enter the key manually:'
+totp.code: Code
+totp.code_wrong: The code is wrong. Check the device clock and try again.
+totp.activate: Activate
+totp.backup_codes: Backup codes
+totp.backup_codes_once: These codes are shown only now. Each works once if the device with the app is missing. Keep them safe!
+totp.codes_left: '{0} No backup codes left.|{1} 1 backup code left.|]1,Inf[ %count% backup codes left.'
+totp.new_codes: New backup codes
+totp.new_codes_confirm: The current backup codes stop working. Continue?
+totp.login_title: Verification code
+totp.login_text: Enter the code from your authenticator app.
+totp.backup_hint: No access to the app? Enter a backup code.
+totp.verify: Verify
+
+reset.title: Reset password
+reset.text: We will send a link to your e-mail address that lets you set a new password.
+reset.submit: Send link
+
+set_password.title_invite: Welcome!
+set_password.title_reset: New password
+set_password.text_invite: Hello %name%, choose a password for %email%. Afterwards you can sign in and add a passkey in your profile.
+set_password.text_reset: Choose a new password for %email%.
+set_password.submit: Save password
+set_password.invalid_title: Invalid link
+set_password.invalid_text: This link has expired or was already used.
+
+password.current: Current password
+password.current_wrong: The current password is wrong.
+password.mismatch: The passwords do not match.
+password.new: New password
+password.repeat: Repeat password
+password.rules: At least 12 characters. Passwords from known breaches are rejected.
+
+ip_blocked.title: Access blocked
+ip_blocked.text: The admin area is only reachable from approved networks. Your address (%ip%) is not one of them.
+
+dashboard.hello: Hello %name%
+dashboard.summary: '{0} No links yet.|{1} You manage 1 link.|]1,Inf[ You manage %count% links.'
+dashboard.shorten: Shorten a link
+dashboard.shorten_submit: Shorten
+dashboard.shorten_hint: Without a custom code a random one is created.
+dashboard.more_options: More options …
+dashboard.your_clicks: Your clicks (30 days)
+dashboard.recent: Recently created
+dashboard.all_links: All links
+
+links.count: '{0} No links|{1} 1 link|]1,Inf[ %count% links'
+links.new: New link
+links.create: Create link
+links.edit: Edit link
+links.search: Search code, target or title …
+links.all_domains: All domains
+links.only_mine: Only mine
+links.empty: No links here yet.
+links.export_csv: CSV export
+links.delete: Delete link
+links.delete_text: The short link stops working and its statistics are deleted too. To pause it, switch off "Active" instead.
+links.delete_confirm: Delete link and statistics for good?
+links.col.link: Link
+links.col.owner: Owner
+links.col.clicks: Clicks
+links.col.created: Created
+
+link.target_url: Target URL
+link.domain: Domain
+link.code: Code
+link.code_help: Lowercase letters, digits, "-" and "_". Leave empty for a random code.
+link.code_placeholder: random
+link.title: Title (internal)
+link.options: Options
+link.redirect_type: Redirect
+link.redirect_help: 302 is recommended – browsers cache permanent redirects (301/308), and those clicks never reach the statistics.
+link.redirect.302: 302 – temporary (recommended)
+link.redirect.301: 301 – permanent
+link.redirect.307: 307 – temporary, keeps method
+link.redirect.308: 308 – permanent, keeps method
+link.expires_at: Expires at
+link.active: Active
+link.inactive: inactive
+link.expired: expired
+link.live: live
+link.localisations: Language-specific targets
+link.localisations_help: Visitors whose browser prefers one of these languages go to that target URL, everybody else to the default target. "de" also matches "de-AT".
+link.add_localisation: Add language
+link.short_url: Short link
+link.qr: QR code
+link.last_click: Last click
+link.total_clicks: Total clicks
+
+localisation.language: Language
+localisation.target_url: Target URL
+
+stats.clicks: Clicks
+stats.visitors: Visitors (unique per day)
+stats.days: Days
+stats.per_day: Clicks per day
+stats.period_days: '%days% days'
+stats.chart_hint: Bots and link previews are not counted. Hover a bar for clicks / visitors.
+stats.no_data: No data yet.
+stats.unknown: unknown
+stats.top_links: Most clicked links
+stats.overview: '%links% links · %users% users · %domains% domains'
+stats.breakdown.referrerHost: Referrers
+stats.breakdown.countryCode: Countries
+stats.breakdown.deviceType: Devices
+stats.breakdown.browser: Browsers
+stats.breakdown.os: Operating systems
+stats.breakdown.language: Languages
+
+device.desktop: Desktop
+device.smartphone: Smartphone
+device.tablet: Tablet
+device.phablet: Phablet
+device.feature phone: Feature phone
+device.console: Console
+device.tv: TV
+device.car browser: Car
+device.smart display: Smart display
+device.smart speaker: Smart speaker
+device.camera: Camera
+device.portable media player: Media player
+device.wearable: Wearable
+device.peripheral: Peripheral
+device.unknown: unknown
+device.bot: Bot
+
+pagination.label: Pages
+pagination.prev: Previous
+pagination.next: Next
+pagination.position: Page %page% of %pages%
+
+profile.tab_account: Account
+profile.tab_security: Security
+profile.tab_api: API
+profile.account: Account
+profile.change_password: Change password
+profile.set_password: Set a password
+profile.security_intro: Passkeys and two-factor code for your account.
+
+api.intro: Personal access tokens for the REST API. A token acts with your permissions.
+api.new_token: New token
+api.token_name: Name
+api.token_name_placeholder: e.g. CRM integration
+api.token_expires: Expires
+api.never: never
+api.create: Create token
+api.token_created: Token created
+api.token_once: The token is shown only now. Copy it somewhere safe.
+api.none: No tokens yet.
+api.token: Token
+api.delete_confirm: Revoke token? Applications using it lose access.
+api.example: Example
+api.docs_hint: 'Endpoints: GET/POST /api/v1/links, GET/PATCH/DELETE /api/v1/links/{id}, GET /api/v1/links/{id}/stats, GET /api/v1/domains. Details in docs/API.md.'
+
+users.intro: Users only see their own links and may only use the domains assigned to them. Admins see everything.
+users.new: Add user
+users.new_hint: The new user receives an invitation link by e-mail to set a password.
+users.create_and_invite: Create and invite
+users.login: Sign-in
+users.last_login: Last sign-in
+users.invited: invited
+users.password: Password
+users.all_domains: all
+users.access: Access
+users.send_invite: Resend invitation
+users.send_invite_text: The user has no password yet. A new invitation link invalidates older ones.
+users.send_reset: Send reset link
+users.send_reset_text: Sends a link that lets the user set a new password (valid for 2 hours).
+users.reset_2fa: Reset two-factor code
+users.reset_2fa_confirm: Turn off TOTP for this user? They can then sign in with their password and set up TOTP again.
+users.delete: Delete user
+users.delete_confirm: Delete this user for good? Their links go to the selected user.
+users.transfer_links: Transfer links to
+
+user.display_name: Name
+user.email: E-mail
+user.admin: Administrator
+user.admin_help: May manage users, domains and settings and sees all links.
+user.active: Active
+user.inactive: locked
+user.domains: Assigned domains
+user.domains_help: The user may create links on these domains. Admins may always use all.
+user.locale: Language
+user.locale_browser: like browser
+
+domains.intro: Hostnames that serve short links. Every domain and subdomain is added on its own.
+domains.new: Add domain
+domains.empty_title: No domain yet
+domains.empty_text: Add the first short-link domain, e.g. go.example.com.
+domains.setup_title: Setup
+domains.setup_text: 'For a domain to work, its DNS record (A/AAAA or CNAME) must point to this server and the web server must hand it to the same application as %host%. TLS certificates (e.g. Let''s Encrypt) are set up in the web server. The admin UI stays reachable only at %host%.'
+domains.delete: Delete domain
+domains.delete_text: Only possible while no links are left on the domain. To switch it off, untick "Active" instead.
+domains.delete_confirm: Really delete this domain?
+
+domain.hostname: Hostname
+domain.hostname_help: e.g. go.example.com or links.example.com. Internationalised domain names are converted automatically.
+domain.active: Active
+domain.inactive: inactive
+domain.is_default: Default domain for new links
+domain.default: default
+domain.root_redirect_url: Redirect the bare domain to
+domain.root_redirect_help: Where the domain without a code leads. Empty shows a neutral page.
+domain.not_found_url: Redirect unknown codes to
+domain.not_found_help: Empty shows a 404 page.
+domain.forward_unknown_paths: Append the path
+domain.forward_unknown_paths_help: go.example.com/products then leads to <redirect target>/products – handy when the short domain replaces an old website.
+
+ip_rules.intro: The admin area (/admin) is reachable only from these networks. Without entries there is no restriction. Normal user pages are not affected.
+ip_rules.restricted: restricted
+ip_rules.open: open to every address
+ip_rules.your_ip: 'Your current address:'
+ip_rules.cidr: IP address or network (CIDR)
+ip_rules.label: Label
+ip_rules.label_placeholder: e.g. office VPN
+ip_rules.add: Add
+ip_rules.add_hint: The first entry must include your current address (%ip%), otherwise you would lock yourself out – the system prevents that.
+ip_rules.env_hint: from the server configuration, always allowed
+ip_rules.none: No entries – every admin can sign in from anywhere.
+ip_rules.delete_confirm: Delete entry?
+ip_rules.emergency_title: Locked out?
+ip_rules.emergency_text: 'On the server the list can always be changed from the console. Permanently allowed addresses belong in ADMIN_IP_ALLOWLIST (.env.local). Behind a reverse proxy TRUSTED_PROXIES must be set, otherwise the application sees the wrong address.'
+ip_rule.would_lock_out: This would lock you out – your current address would no longer be allowed.
+
+settings.branding: Appearance
+settings.title: Installation name
+settings.accent: Accent colour
+settings.logo: Logo
+settings.logo_help: SVG, PNG or WebP, at most 256 KB. Shown in the header.
+settings.remove_logo: Remove custom logo
+settings.links: Links
+settings.code_length: Length of random codes
+settings.default_redirect: Default redirect
+settings.tracking_title: Tracking
+settings.tracking: Record clicks
+settings.tracking_help: Stored are time, referring site (domain only), device, browser, language and optionally the country. No cookies, no full IP addresses.
+settings.track_country: Look up country
+settings.track_country_help: Locally via a GeoLite2 database (GEOIP_DATABASE_PATH), no external services.
+settings.geoip_missing: No GeoIP database configured – countries stay empty.
+settings.security: Security
+settings.require_2fa_admins: Require a second factor for admins
+settings.require_2fa_admins_help: Admins without passkey and without TOTP are sent to the setup after signing in.
+
+redirect.unknown_domain.title: Unknown address
+redirect.unknown_domain.text: No short links are set up at %host%.
+redirect.root.text: Short links live here. Without a code there is nothing to see.
+redirect.not_found.title: Short link not found
+redirect.not_found.text: '%url% does not exist. Maybe a typo?'
+redirect.gone.title: Link no longer available
+redirect.gone.text: This short link was deactivated or has expired.
+
+mail.greeting: Hello %name%,
+mail.valid_until: The link is valid until %date%.
+mail.ignore: You did not request this? Then simply ignore this e-mail.
+mail.invite.subject: Invitation to %title%
+mail.invite.heading: Welcome to %title%
+mail.invite.text: 'an account at %title% was created for you (%email%). Use the following link to set your password:'
+mail.invite.button: Set password
+mail.reset.subject: Reset password – %title%
+mail.reset.heading: Reset password
+mail.reset.text: 'a new password was requested for your account %email%. Use the following link to set it:'
+mail.reset.button: Set new password
+
+flash.2fa_required: A second factor is required for admins. Please set up a passkey or a two-factor code.
+flash.account_link_copy: 'Invitation / password link (to pass on if no e-mail arrives):'
+flash.account_link_sent: Link sent by e-mail.
+flash.account_link_not_sent: The e-mail could not be sent. Please pass on the link yourself.
+flash.domain_deleted: Domain deleted.
+flash.domain_has_links: There are still links on this domain. Delete or move them first – or deactivate the domain.
+flash.domain_saved: Domain saved.
+flash.invite_done: Password saved. You can sign in now.
+flash.reset_done: New password saved.
+flash.reset_sent: If the address is known, a link is on its way.
+flash.ip_rule_added: Entry added.
+flash.ip_rule_deleted: Entry deleted.
+flash.link_created: Short link created.
+flash.link_deleted: Link deleted.
+flash.link_saved: Link saved.
+flash.no_domains: No domain has been assigned to you yet. An admin needs to assign one.
+flash.passkey_deleted: Passkey deleted.
+flash.passkey_last: This is your last way to sign in. Set a password or add another passkey first.
+flash.password_changed: Password changed.
+flash.profile_saved: Profile saved.
+flash.settings_saved: Settings saved.
+flash.token_deleted: Token revoked.
+flash.totp_disabled: Two-factor code turned off.
+flash.totp_enabled: Two-factor code active. Keep the backup codes safe.
+flash.user_2fa_reset: Two-factor code reset.
+flash.user_delete_self: You cannot delete yourself.
+flash.user_deleted: User deleted.
+flash.user_saved: User saved.
+
+error.403: You lack the permission for this.
+error.404: This page does not exist.
+error.410: This page no longer exists.
+error.429: Too many requests. Please wait a moment.
+error.generic: Something went wrong.
+error.home: Home

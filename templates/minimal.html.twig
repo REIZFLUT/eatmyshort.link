@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="auth">
+        <div class="auth-box">
+            <a class="brand" href="{{ path('app_login') }}">
+                {% if has_custom_logo() %}
+                    <img src="{{ path('app_branding_logo') }}" alt="{{ app_title() }}">
+                {% else %}
+                    {{ include('_logo.svg.twig') }}
+                {% endif %}
+            </a>
+            {{ include('_partials/flashes.html.twig') }}
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+{% endblock %}

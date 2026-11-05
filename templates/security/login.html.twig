@@ -1,0 +1,41 @@
+{% extends 'minimal.html.twig' %}
+
+{% block title %}{{ 'login.title'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <h1>{{ 'login.title'|trans }}</h1>
+
+        {% if error %}
+            <ul class="errors form-errors"><li>{{ error.messageKey|trans(error.messageData, 'security') }}</li></ul>
+        {% endif %}
+
+        <button type="button" class="btn btn-block"
+                data-passkey="login"
+                data-options-url="{{ path('webauthn.controller.security.main.request.options') }}"
+                data-result-url="{{ path('webauthn.controller.security.main.request.result') }}"
+                data-success-url="{{ path('app_dashboard') }}"
+                data-error-message="{{ 'passkey.login_failed'|trans }}"
+                data-aborted-message="{{ 'passkey.aborted'|trans }}">
+            {{ 'passkey.login'|trans }}
+        </button>
+        <p id="passkey-error" class="errors" hidden></p>
+        <p id="passkey-unsupported" class="small muted" hidden>{{ 'passkey.unsupported'|trans }}</p>
+
+        <div class="divider">{{ 'login.or_password'|trans }}</div>
+
+        <form method="post" action="{{ path('app_login') }}">
+            <div class="field">
+                <label for="email">{{ 'user.email'|trans }}</label>
+                <input type="email" id="email" name="email" value="{{ last_username }}" autocomplete="username webauthn" required autofocus>
+            </div>
+            <div class="field">
+                <label for="password">{{ 'login.password'|trans }}</label>
+                <input type="password" id="password" name="password" autocomplete="current-password" required>
+            </div>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+            <button type="submit" class="btn btn-primary btn-block">{{ 'login.submit'|trans }}</button>
+        </form>
+        <p class="small"><a href="{{ path('app_reset_request') }}">{{ 'login.forgot'|trans }}</a></p>
+    </div>
+{% endblock %}

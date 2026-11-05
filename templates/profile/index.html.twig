@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.profile'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'nav.profile'|trans }}</h1>
+            <p class="sub">{{ app.user.email }}</p>
+        </div>
+        {{ include('profile/_nav.html.twig') }}
+    </div>
+
+    <div class="grid grid-2">
+        <div class="card">
+            <h2>{{ 'profile.account'|trans }}</h2>
+            {{ form_start(profile_form) }}
+                {{ form_widget(profile_form) }}
+                <button type="submit" class="btn btn-primary">{{ 'action.save'|trans }}</button>
+            {{ form_end(profile_form) }}
+        </div>
+        <div class="card">
+            <h2>{{ app.user.hasPassword ? 'profile.change_password'|trans : 'profile.set_password'|trans }}</h2>
+            {{ form_start(password_form) }}
+                {{ form_widget(password_form) }}
+                <button type="submit" class="btn btn-primary">{{ 'action.save'|trans }}</button>
+            {{ form_end(password_form) }}
+        </div>
+    </div>
+{% endblock %}

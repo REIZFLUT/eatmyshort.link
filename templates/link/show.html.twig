@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ link.domain.displayName }}/{{ link.code }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ link.title ?? (link.domain.displayName ~ '/' ~ link.code) }}</h1>
+            <p class="sub">
+                {% if link.live %}<span class="badge badge-success">{{ 'link.live'|trans }}</span>{% endif %}
+                {% if not link.active %}<span class="badge badge-warning">{{ 'link.inactive'|trans }}</span>{% endif %}
+                {% if link.expired %}<span class="badge badge-danger">{{ 'link.expired'|trans }}</span>{% endif %}
+                {% if not link.domain.active %}<span class="badge badge-danger">{{ 'domain.inactive'|trans }}</span>{% endif %}
+            </p>
+        </div>
+        <div class="actions">
+            <a class="btn" href="{{ path('app_link_export', {id: link.id, days: stats.period.days}) }}">{{ 'links.export_csv'|trans }}</a>
+            <a class="btn btn-primary" href="{{ path('app_link_edit', {id: link.id}) }}">{{ 'action.edit'|trans }}</a>
+        </div>
+    </div>
+
+    <div class="stack">
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="label muted small">{{ 'link.short_url'|trans }}</div>
+                <div class="copy-field">
+                    <input type="text" readonly value="{{ link.shortUrl }}" id="short-url" class="short-url-input">
+                    <button type="button" class="btn btn-primary" data-copy-target="#short-url" data-copied-label="{{ 'action.copied'|trans }}">{{ 'action.copy'|trans }}</button>
+                </div>
+                <hr>
+                <dl class="kv">
+                    <dt>{{ 'link.target_url'|trans }}</dt>
+                    <dd><a href="{{ link.targetUrl }}" rel="noopener noreferrer" target="_blank">{{ link.targetUrl }}</a></dd>
+                    {% for localisation in link.localisations %}
+                        <dt>{{ localisation.language|language_name(app.request.locale) }} <span class="badge">{{ localisation.language }}</span></dt>
+                        <dd><a href="{{ localisation.targetUrl }}" rel="noopener noreferrer" target="_blank">{{ localisation.targetUrl }}</a></dd>
+                    {% endfor %}
+                    <dt>{{ 'link.redirect_type'|trans }}</dt>
+                    <dd>{{ ('link.redirect.' ~ link.redirectType)|trans }}</dd>
+                    <dt>{{ 'link.expires_at'|trans }}</dt>
+                    <dd>{{ link.expiresAt ? link.expiresAt|date('d.m.Y H:i') : '–' }}</dd>
+                    <dt>{{ 'links.col.owner'|trans }}</dt>
+                    <dd>{{ link.owner.displayName }}</dd>
+                    <dt>{{ 'links.col.created'|trans }}</dt>
+                    <dd>{{ link.createdAt|date('d.m.Y H:i') }}</dd>
+                    <dt>{{ 'link.last_click'|trans }}</dt>
+                    <dd>{{ link.lastClickAt ? link.lastClickAt|date('d.m.Y H:i') : '–' }}</dd>
+                    <dt>{{ 'link.total_clicks'|trans }}</dt>
+                    <dd>{{ link.clickCount|number_format(0, ',', '.') }}</dd>
+                </dl>
+            </div>
+            <div class="card">
+                <h2>{{ 'link.qr'|trans }}</h2>
+                <div class="qr"><img src="{{ path('app_link_qr', {id: link.id, format: 'svg'}) }}" alt="{{ 'link.qr'|trans }}" width="180" height="180"></div>
+                <div class="actions" id="qr-downloads">
+                    <a class="btn btn-sm" href="{{ path('app_link_qr', {id: link.id, format: 'svg', download: 1}) }}">SVG</a>
+                    <a class="btn btn-sm" href="{{ path('app_link_qr', {id: link.id, format: 'png', download: 1}) }}">PNG</a>
+                </div>
+            </div>
+        </div>
+
+        {{ include('_partials/stats.html.twig', {stats: stats, periods: periods}) }}
+    </div>
+{% endblock %}

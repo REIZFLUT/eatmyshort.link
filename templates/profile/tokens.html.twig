@@ -1,0 +1,91 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'profile.tab_api'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'profile.tab_api'|trans }}</h1>
+            <p class="sub">{{ 'api.intro'|trans }}</p>
+        </div>
+        {{ include('profile/_nav.html.twig') }}
+    </div>
+
+    <div class="stack">
+        {% if plain_token %}
+            <div class="card">
+                <h2>{{ 'api.token_created'|trans }}</h2>
+                <p>{{ 'api.token_once'|trans }}</p>
+                <div class="copy-field">
+                    <input type="text" readonly value="{{ plain_token }}" id="new-token">
+                    <button type="button" class="btn btn-primary" data-copy-target="#new-token" data-copied-label="{{ 'action.copied'|trans }}">{{ 'action.copy'|trans }}</button>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="card">
+            <h2>{{ 'api.new_token'|trans }}</h2>
+            <form method="post" class="form-row">
+                <div class="field">
+                    <label for="token-name">{{ 'api.token_name'|trans }}</label>
+                    <input type="text" id="token-name" name="name" maxlength="100" placeholder="{{ 'api.token_name_placeholder'|trans }}" required>
+                </div>
+                <div class="field">
+                    <label for="token-days">{{ 'api.token_expires'|trans }}</label>
+                    <select id="token-days" name="days">
+                        <option value="0">{{ 'api.never'|trans }}</option>
+                        {% for days in [30, 90, 365] %}
+                            <option value="{{ days }}">{{ 'stats.period_days'|trans({'%days%': days}) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <span class="label">&nbsp;</span>
+                    <input type="hidden" name="_token" value="{{ csrf_token('api-token-create') }}">
+                    <button class="btn btn-primary">{{ 'api.create'|trans }}</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card flush">
+            {% if tokens is empty %}
+                <div class="empty"><p>{{ 'api.none'|trans }}</p></div>
+            {% else %}
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>{{ 'api.token_name'|trans }}</th><th>{{ 'api.token'|trans }}</th><th class="hide-sm">{{ 'passkey.last_used'|trans }}</th><th class="hide-sm">{{ 'api.token_expires'|trans }}</th><th></th></tr></thead>
+                        <tbody>
+                            {% for token in tokens %}
+                                <tr>
+                                    <td>{{ token.name }}</td>
+                                    <td class="mono small">{{ token.hint }}…</td>
+                                    <td class="hide-sm small muted">{{ token.lastUsedAt ? token.lastUsedAt|date('d.m.Y H:i') : '–' }}</td>
+                                    <td class="hide-sm small">
+                                        {% if token.expiresAt %}
+                                            <span class="{{ token.expired ? 'badge badge-danger' }}">{{ token.expiresAt|date('d.m.Y') }}</span>
+                                        {% else %}–{% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" action="{{ path('app_profile_token_delete', {id: token.id}) }}" class="inline-form" data-confirm="{{ 'api.delete_confirm'|trans }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('api-token-delete-' ~ token.id) }}">
+                                            <button class="btn btn-sm btn-danger">{{ 'action.revoke'|trans }}</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>{{ 'api.example'|trans }}</h2>
+            <pre class="mono small code-block">curl -X POST https://{{ primary_admin_host() }}/api/v1/links \
+  -H "Authorization: Bearer emsl_…" \
+  -H "Content-Type: application/json" \
+  -d '{"target_url": "https://example.com/campaign", "code": "summer"}'</pre>
+            <p class="small muted">{{ 'api.docs_hint'|trans }}</p>
+        </div>
+    </div>
+{% endblock %}

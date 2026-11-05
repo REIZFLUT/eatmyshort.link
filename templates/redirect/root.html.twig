@@ -1,0 +1,6 @@
+{% extends 'redirect/_layout.html.twig' %}
+{% block title %}{{ domain.displayName }}{% endblock %}
+{% block content %}
+    <h2>{{ domain.displayName }}</h2>
+    <p>{{ 'redirect.root.text'|trans }}</p>
+{% endblock %}

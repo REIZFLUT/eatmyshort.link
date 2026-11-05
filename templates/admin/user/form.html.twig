@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ user.id ? user.displayName : 'users.new'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head">
+            <div>
+                <h1>{{ user.id ? user.displayName : 'users.new'|trans }}</h1>
+                {% if user.id %}<p class="sub">{{ user.email }}</p>{% else %}<p class="sub">{{ 'users.new_hint'|trans }}</p>{% endif %}
+            </div>
+            <a class="btn btn-ghost" href="{{ path('app_admin_users') }}">← {{ 'nav.users'|trans }}</a>
+        </div>
+
+        {{ form_start(form) }}
+            <div class="card">
+                {{ form_errors(form) }}
+                <div class="form-row">
+                    {{ form_row(form.displayName) }}
+                    {{ form_row(form.email) }}
+                </div>
+                {{ form_row(form.admin) }}
+                {{ form_row(form.active) }}
+                {{ form_row(form.domains) }}
+                {{ form_rest(form) }}
+                <div class="form-actions">
+                    <button class="btn btn-primary">{{ user.id ? 'action.save'|trans : 'users.create_and_invite'|trans }}</button>
+                </div>
+            </div>
+        {{ form_end(form) }}
+
+        {% if user.id %}
+            <div class="card">
+                <h2>{{ 'users.access'|trans }}</h2>
+                <p class="small muted">{{ user.hasPassword ? 'users.send_reset_text'|trans : 'users.send_invite_text'|trans }}</p>
+                <div class="actions">
+                    <form method="post" action="{{ path('app_admin_user_send_link', {id: user.id}) }}" class="inline-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('user-link-' ~ user.id) }}">
+                        <button class="btn">{{ user.hasPassword ? 'users.send_reset'|trans : 'users.send_invite'|trans }}</button>
+                    </form>
+                    {% if user.totpAuthenticationEnabled %}
+                        <form method="post" action="{{ path('app_admin_user_reset_2fa', {id: user.id}) }}" class="inline-form" data-confirm="{{ 'users.reset_2fa_confirm'|trans }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('user-2fa-' ~ user.id) }}">
+                            <button class="btn btn-danger">{{ 'users.reset_2fa'|trans }}</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if not is_self|default(false) %}
+                <div class="card danger">
+                    <h2>{{ 'users.delete'|trans }}</h2>
+                    <form method="post" action="{{ path('app_admin_user_delete', {id: user.id}) }}" data-confirm="{{ 'users.delete_confirm'|trans }}">
+                        <div class="field">
+                            <label for="transfer_to">{{ 'users.transfer_links'|trans }}</label>
+                            <select id="transfer_to" name="transfer_to">
+                                {% for target in transfer_targets %}
+                                    <option value="{{ target.id }}" {{ target.id == app.user.id ? 'selected' }}>{{ target.displayName }} ({{ target.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" name="_token" value="{{ csrf_token('user-delete-' ~ user.id) }}">
+                        <button class="btn btn-danger">{{ 'users.delete'|trans }}</button>
+                    </form>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endblock %}

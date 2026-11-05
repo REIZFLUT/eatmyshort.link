@@ -1,8 +1,14 @@
 parameters:
-    level: 6
+    level: 8
     paths:
         - bin/
         - config/
         - public/
         - src/
         - tests/
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    doctrine:
+        objectManagerLoader: tests/object-manager.php
+        # Entities are bound to forms, which need nullable setters/properties for required relations.
+        allowNullablePropertyForRequiredField: true

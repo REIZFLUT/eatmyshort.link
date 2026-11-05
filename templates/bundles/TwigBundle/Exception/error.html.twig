@@ -1,0 +1,7 @@
+{% extends 'redirect/_layout.html.twig' %}
+{% block title %}{{ status_code }}{% endblock %}
+{% block content %}
+    <h2>{{ status_code }} · {{ status_text }}</h2>
+    <p>{{ ('error.' ~ (status_code in [403, 404, 410, 429] ? status_code : 'generic'))|trans }}</p>
+    <p><a href="/">{{ 'error.home'|trans }}</a></p>
+{% endblock %}

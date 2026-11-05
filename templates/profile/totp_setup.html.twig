@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'totp.enable'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head"><h1>{{ 'totp.enable'|trans }}</h1></div>
+        <div class="card">
+            <ol class="steps">
+                <li>{{ 'totp.step_scan'|trans }}</li>
+            </ol>
+            <div class="qr"><img src="{{ path('app_profile_totp_qr') }}?v={{ secret|slice(0, 6) }}" alt="QR" width="180" height="180"></div>
+            <p class="small muted">{{ 'totp.manual'|trans }} <code>{{ secret|split('', 4)|join(' ') }}</code></p>
+            <ol class="steps" start="2">
+                <li>{{ 'totp.step_confirm'|trans }}</li>
+            </ol>
+            <form method="post">
+                <div class="field{{ error ? ' has-error' }}">
+                    <label for="code">{{ 'totp.code'|trans }}</label>
+                    <input type="text" id="code" name="code" class="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus>
+                    {% if error %}<ul class="errors"><li>{{ error|trans }}</li></ul>{% endif %}
+                </div>
+                <input type="hidden" name="_token" value="{{ csrf_token('totp-setup') }}">
+                <div class="form-actions">
+                    <button class="btn btn-primary">{{ 'totp.activate'|trans }}</button>
+                    <a class="btn btn-ghost" href="{{ path('app_profile_security') }}">{{ 'action.cancel'|trans }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

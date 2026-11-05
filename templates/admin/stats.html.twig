@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.stats'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'nav.stats'|trans }}</h1>
+            <p class="sub">{{ 'stats.overview'|trans({'%links%': counts.links, '%users%': counts.users, '%domains%': counts.domains}) }}</p>
+        </div>
+    </div>
+    <div class="stack">
+        {{ include('_partials/stats.html.twig', {stats: stats, periods: periods}) }}
+        <div class="card flush">
+            <div class="card-head card-pad"><h2>{{ 'stats.top_links'|trans }}</h2></div>
+            {% if top_links is empty %}
+                <div class="empty"><p>{{ 'stats.no_data'|trans }}</p></div>
+            {% else %}
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>{{ 'links.col.link'|trans }}</th><th class="hide-sm">{{ 'links.col.owner'|trans }}</th><th class="num">{{ 'stats.clicks'|trans }}</th></tr></thead>
+                        <tbody>
+                            {% for row in top_links %}
+                                <tr>
+                                    <td class="link-cell"><a class="short truncate" href="{{ path('app_link_show', {id: row.link.id}) }}">{{ row.link.domain.displayName }}/{{ row.link.code }}</a><span class="target truncate">{{ row.link.title ?? row.link.targetUrl }}</span></td>
+                                    <td class="hide-sm small">{{ row.link.owner.displayName }}</td>
+                                    <td class="num">{{ row.clicks|number_format(0, ',', '.') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

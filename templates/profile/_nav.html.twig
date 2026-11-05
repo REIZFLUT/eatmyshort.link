@@ -1,0 +1,6 @@
+{% set route = app.request.attributes.get('_route') %}
+<div class="segmented" id="profile-nav">
+    <a href="{{ path('app_profile') }}" class="{{ route == 'app_profile' ? 'active' }}">{{ 'profile.tab_account'|trans }}</a>
+    <a href="{{ path('app_profile_security') }}" class="{{ route starts with 'app_profile_security' or route starts with 'app_profile_totp' ? 'active' }}">{{ 'profile.tab_security'|trans }}</a>
+    <a href="{{ path('app_profile_tokens') }}" class="{{ route starts with 'app_profile_token' ? 'active' }}">{{ 'profile.tab_api'|trans }}</a>
+</div>

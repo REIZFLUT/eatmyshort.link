@@ -1,0 +1,12 @@
+{% if pages > 1 %}
+    <nav class="pagination" aria-label="{{ 'pagination.label'|trans }}">
+        {% set query = app.request.query.all %}
+        {% if page > 1 %}
+            <a class="btn btn-sm" href="{{ path(app.request.attributes.get('_route'), query|merge({page: page - 1})) }}">← {{ 'pagination.prev'|trans }}</a>
+        {% endif %}
+        <span class="muted small">{{ 'pagination.position'|trans({'%page%': page, '%pages%': pages}) }}</span>
+        {% if page < pages %}
+            <a class="btn btn-sm" href="{{ path(app.request.attributes.get('_route'), query|merge({page: page + 1})) }}">{{ 'pagination.next'|trans }} →</a>
+        {% endif %}
+    </nav>
+{% endif %}

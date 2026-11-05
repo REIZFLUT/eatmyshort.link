@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'links.edit'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head">
+            <div>
+                <h1>{{ 'links.edit'|trans }}</h1>
+                <p class="sub mono">{{ link.shortUrl }}</p>
+            </div>
+        </div>
+        {{ include('link/_form.html.twig', {submit_label: 'action.save', cancel_url: path('app_link_show', {id: link.id})}) }}
+
+        <div class="card danger">
+            <h2>{{ 'links.delete'|trans }}</h2>
+            <p class="muted small">{{ 'links.delete_text'|trans }}</p>
+            <form method="post" action="{{ path('app_link_delete', {id: link.id}) }}" data-confirm="{{ 'links.delete_confirm'|trans }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete-link-' ~ link.id) }}">
+                <button class="btn btn-danger">{{ 'links.delete'|trans }}</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

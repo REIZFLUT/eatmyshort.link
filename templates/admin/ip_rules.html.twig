@@ -1,0 +1,77 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.ip_rules'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'nav.ip_rules'|trans }}</h1>
+            <p class="sub">{{ 'ip_rules.intro'|trans }}</p>
+        </div>
+    </div>
+
+    <div class="stack">
+        <div class="card">
+            <p>
+                {% if restricted %}
+                    <span class="badge badge-success">{{ 'ip_rules.restricted'|trans }}</span>
+                {% else %}
+                    <span class="badge badge-warning">{{ 'ip_rules.open'|trans }}</span>
+                {% endif %}
+                <span class="small muted">{{ 'ip_rules.your_ip'|trans }} <code>{{ client_ip }}</code></span>
+            </p>
+            <form method="post" class="form-row">
+                <div class="field{{ errors ? ' has-error' }}">
+                    <label for="cidr">{{ 'ip_rules.cidr'|trans }}</label>
+                    <input type="text" id="cidr" name="cidr" value="{{ new_rule.cidr }}" placeholder="203.0.113.0/24" required>
+                    {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e|trans }}</li>{% endfor %}</ul>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="label">{{ 'ip_rules.label'|trans }}</label>
+                    <input type="text" id="label" name="label" value="{{ new_rule.label }}" maxlength="120" placeholder="{{ 'ip_rules.label_placeholder'|trans }}">
+                </div>
+                <div class="field">
+                    <span class="label">&nbsp;</span>
+                    <input type="hidden" name="_token" value="{{ csrf_token('ip-rule-add') }}">
+                    <button class="btn btn-primary">{{ 'ip_rules.add'|trans }}</button>
+                </div>
+            </form>
+            <p class="small muted">{{ 'ip_rules.add_hint'|trans({'%ip%': client_ip}) }}</p>
+        </div>
+
+        <div class="card flush">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>{{ 'ip_rules.cidr'|trans }}</th><th>{{ 'ip_rules.label'|trans }}</th><th></th></tr></thead>
+                    <tbody>
+                        {% for cidr in env_rules %}
+                            <tr><td class="mono">{{ cidr }}</td><td><span class="badge">ADMIN_IP_ALLOWLIST</span> <span class="small muted">{{ 'ip_rules.env_hint'|trans }}</span></td><td></td></tr>
+                        {% endfor %}
+                        {% for rule in rules %}
+                            <tr>
+                                <td class="mono">{{ rule.cidr }}</td>
+                                <td>{{ rule.label ?? '–' }}</td>
+                                <td class="num">
+                                    <form method="post" action="{{ path('app_admin_ip_rule_delete', {id: rule.id}) }}" class="inline-form" data-confirm="{{ 'ip_rules.delete_confirm'|trans }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('ip-rule-delete-' ~ rule.id) }}">
+                                        <button class="btn btn-sm btn-danger">{{ 'action.delete'|trans }}</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        {% if rules is empty and env_rules is empty %}
+                            <tr><td colspan="3" class="muted">{{ 'ip_rules.none'|trans }}</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>{{ 'ip_rules.emergency_title'|trans }}</h2>
+            <p class="small">{{ 'ip_rules.emergency_text'|trans }}</p>
+            <pre class="mono small code-block">php bin/console app:admin-ip allow 203.0.113.7
+php bin/console app:admin-ip clear</pre>
+        </div>
+    </div>
+{% endblock %}

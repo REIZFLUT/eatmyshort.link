@@ -1,0 +1,6 @@
+{% extends 'redirect/_layout.html.twig' %}
+{% block title %}{{ 'ip_blocked.title'|trans }}{% endblock %}
+{% block content %}
+    <h2>{{ 'ip_blocked.title'|trans }}</h2>
+    <p>{{ 'ip_blocked.text'|trans({'%ip%': ip ?? '?'}) }}</p>
+{% endblock %}

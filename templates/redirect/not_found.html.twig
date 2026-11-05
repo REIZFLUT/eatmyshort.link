@@ -1,0 +1,6 @@
+{% extends 'redirect/_layout.html.twig' %}
+{% block title %}{{ 'redirect.not_found.title'|trans }}{% endblock %}
+{% block content %}
+    <h2>{{ 'redirect.not_found.title'|trans }}</h2>
+    <p>{{ 'redirect.not_found.text'|trans({'%url%': domain.displayName ~ app.request.pathInfo}) }}</p>
+{% endblock %}

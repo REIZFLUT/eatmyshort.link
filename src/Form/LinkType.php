@@ -1,0 +1,109 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Form;
+
+use App\Entity\Domain;
+use App\Entity\Link;
+use App\Link\LinkManager;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\UrlType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+
+/**
+ * @extends AbstractType<Link>
+ */
+final class LinkType extends AbstractType
+{
+    public function __construct(private readonly LinkManager $manager)
+    {
+    }
+
+    public function buildForm(FormBuilderInterface $builder, array $options): void
+    {
+        $builder
+            ->add('targetUrl', UrlType::class, [
+                'label' => 'link.target_url',
+                'default_protocol' => 'https',
+                'attr' => ['placeholder' => 'https://', 'autofocus' => $options['autofocus']],
+            ])
+            ->add('domain', EntityType::class, [
+                'label' => 'link.domain',
+                'class' => Domain::class,
+                'choices' => $options['domains'],
+                'choice_label' => static fn (Domain $domain): string => $domain->getDisplayName(),
+                'placeholder' => false,
+            ])
+            ->add('code', TextType::class, [
+                'label' => 'link.code',
+                'required' => false,
+                'empty_data' => '',
+                'help' => 'link.code_help',
+                'attr' => ['placeholder' => 'link.code_placeholder', 'pattern' => '[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}', 'autocapitalize' => 'off', 'spellcheck' => 'false'],
+            ]);
+
+        if ($options['full']) {
+            $builder
+                ->add('title', TextType::class, ['label' => 'link.title', 'required' => false])
+                ->add('redirectType', ChoiceType::class, [
+                    'label' => 'link.redirect_type',
+                    'choices' => [
+                        'link.redirect.302' => 302,
+                        'link.redirect.301' => 301,
+                        'link.redirect.307' => 307,
+                        'link.redirect.308' => 308,
+                    ],
+                    'help' => 'link.redirect_help',
+                ])
+                ->add('expiresAt', DateTimeType::class, [
+                    'label' => 'link.expires_at',
+                    'required' => false,
+                    'widget' => 'single_text',
+                    'input' => 'datetime_immutable',
+                    'with_seconds' => false,
+                ])
+                ->add('active', CheckboxType::class, ['label' => 'link.active', 'required' => false])
+                ->add('localisations', CollectionType::class, [
+                    'label' => 'link.localisations',
+                    'entry_type' => LinkLocalisationType::class,
+                    'entry_options' => ['label' => false],
+                    'allow_add' => true,
+                    'allow_delete' => true,
+                    'by_reference' => false,
+                    'prototype' => true,
+                    'help' => 'link.localisations_help',
+                ]);
+        }
+
+        // Fill in a random code before validation runs (ValidationListener has priority 0).
+        $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event): void {
+            $link = $event->getData();
+            if ($link instanceof Link) {
+                $this->manager->prepare($link);
+            }
+        }, 10);
+    }
+
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $resolver->setDefaults([
+            'data_class' => Link::class,
+            'full' => true,
+            'autofocus' => false,
+        ]);
+        $resolver->setRequired('domains');
+        $resolver->setAllowedTypes('domains', 'array');
+        $resolver->setAllowedTypes('full', 'bool');
+        $resolver->setAllowedTypes('autofocus', 'bool');
+    }
+}

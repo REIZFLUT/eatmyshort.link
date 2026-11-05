@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.settings'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head"><h1>{{ 'nav.settings'|trans }}</h1></div>
+        {{ form_start(form) }}
+            {{ form_errors(form) }}
+            <div class="card">
+                <h2>{{ 'settings.branding'|trans }}</h2>
+                {{ form_row(form.title) }}
+                {{ form_row(form.accent) }}
+                {% if has_custom_logo() %}
+                    <p><img src="{{ path('app_branding_logo') }}" alt="Logo" class="logo-preview"></p>
+                {% endif %}
+                {{ form_row(form.logo) }}
+                {% if has_custom_logo() %}{{ form_row(form.removeLogo) }}{% else %}{% do form.removeLogo.setRendered %}{% endif %}
+            </div>
+            <div class="card">
+                <h2>{{ 'settings.links'|trans }}</h2>
+                <div class="form-row">
+                    {{ form_row(form.codeLength) }}
+                    {{ form_row(form.defaultRedirect) }}
+                </div>
+            </div>
+            <div class="card">
+                <h2>{{ 'settings.tracking_title'|trans }}</h2>
+                {{ form_row(form.tracking) }}
+                {{ form_row(form.trackCountry) }}
+                {% if not geoip_available %}<p class="small muted">{{ 'settings.geoip_missing'|trans }}</p>{% endif %}
+            </div>
+            <div class="card">
+                <h2>{{ 'settings.security'|trans }}</h2>
+                {{ form_row(form.require2faAdmins) }}
+            </div>
+            {{ form_rest(form) }}
+            <div class="form-actions"><button class="btn btn-primary">{{ 'action.save'|trans }}</button></div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

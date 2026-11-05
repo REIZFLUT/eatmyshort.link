@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.users'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'nav.users'|trans }}</h1>
+            <p class="sub">{{ 'users.intro'|trans }}</p>
+        </div>
+        <a class="btn btn-primary" href="{{ path('app_admin_user_new') }}">{{ 'users.new'|trans }}</a>
+    </div>
+
+    <div class="card flush">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>{{ 'user.display_name'|trans }}</th>
+                        <th class="hide-sm">{{ 'user.domains'|trans }}</th>
+                        <th class="hide-sm">{{ 'users.login'|trans }}</th>
+                        <th class="num">{{ 'nav.links'|trans }}</th>
+                        <th class="hide-sm">{{ 'users.last_login'|trans }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        {% set u = row.user %}
+                        <tr>
+                            <td>
+                                <a href="{{ path('app_admin_user_edit', {id: u.id}) }}"><strong>{{ u.displayName }}</strong></a>
+                                <div class="small muted">{{ u.email }}</div>
+                                {% if u.admin %}<span class="badge badge-accent">{{ 'user.admin'|trans }}</span>{% endif %}
+                                {% if not u.active %}<span class="badge badge-danger">{{ 'user.inactive'|trans }}</span>{% endif %}
+                                {% if not u.hasPassword and row.passkeys == 0 %}<span class="badge badge-warning">{{ 'users.invited'|trans }}</span>{% endif %}
+                            </td>
+                            <td class="hide-sm small">
+                                {% if u.admin %}<span class="muted">{{ 'users.all_domains'|trans }}</span>
+                                {% else %}{{ u.domains|map(d => d.displayName)|join(', ') ?: '–' }}{% endif %}
+                            </td>
+                            <td class="hide-sm small">
+                                {% if u.hasPassword %}<span class="badge">{{ 'users.password'|trans }}</span>{% endif %}
+                                {% if u.totpAuthenticationEnabled %}<span class="badge badge-success">TOTP</span>{% endif %}
+                                {% if row.passkeys > 0 %}<span class="badge badge-success">{{ 'passkey.count'|trans({'%count%': row.passkeys}) }}</span>{% endif %}
+                            </td>
+                            <td class="num">{{ row.links }}</td>
+                            <td class="hide-sm small muted">{{ u.lastLoginAt ? u.lastLoginAt|date('d.m.Y H:i') : '–' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

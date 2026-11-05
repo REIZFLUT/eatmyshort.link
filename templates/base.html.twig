@@ -1,24 +1,59 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
-        {% block stylesheets %}
-        {% endblock %}
+<html lang="{{ app.request.locale }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}{% endblock %}{% if block('title') is not empty %} · {% endif %}{{ app_title() }}</title>
+    <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ path('app_branding_css') }}">
+    {% block importmap %}{{ importmap('app', {nonce: csp_nonce()}) }}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% block body %}
+    {% set route = app.request.attributes.get('_route') ?? '' %}
+    <header class="topbar">
+        <div class="container">
+            <a class="brand" href="{{ path('app_dashboard') }}" title="{{ app_title() }}">
+                {% if has_custom_logo() %}
+                    <img src="{{ path('app_branding_logo') }}" alt="{{ app_title() }}">
+                {% else %}
+                    {{ include('_logo.svg.twig') }}
+                {% endif %}
+            </a>
+            <nav class="nav" aria-label="{{ 'nav.main'|trans }}">
+                <a href="{{ path('app_dashboard') }}" class="{{ route == 'app_dashboard' ? 'active' }}">{{ 'nav.dashboard'|trans }}</a>
+                <a href="{{ path('app_links') }}" class="{{ route starts with 'app_link' ? 'active' }}">{{ 'nav.links'|trans }}</a>
+                {% if is_granted('ROLE_ADMIN') %}
+                    <span class="sep" aria-hidden="true"></span>
+                    <a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ 'nav.users'|trans }}</a>
+                    <a href="{{ path('app_admin_domains') }}" class="{{ route starts with 'app_admin_domain' ? 'active' }}">{{ 'nav.domains'|trans }}</a>
+                    <a href="{{ path('app_admin_stats') }}" class="{{ route == 'app_admin_stats' ? 'active' }}">{{ 'nav.stats'|trans }}</a>
+                    <a href="{{ path('app_admin_ip_rules') }}" class="{{ route starts with 'app_admin_ip' ? 'active' }}">{{ 'nav.ip_rules'|trans }}</a>
+                    <a href="{{ path('app_admin_settings') }}" class="{{ route == 'app_admin_settings' ? 'active' }}">{{ 'nav.settings'|trans }}</a>
+                {% endif %}
+            </nav>
+            <div class="usermenu">
+                <a href="{{ path('app_profile') }}" class="{{ route starts with 'app_profile' ? 'active' }}" title="{{ 'nav.profile'|trans }}">{{ app.user.displayName }}</a>
+                <a href="{{ path('app_logout') }}" class="btn btn-sm">{{ 'nav.logout'|trans }}</a>
+            </div>
+        </div>
+    </header>
 
-        {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
-        {% endblock %}
+    <main>
+        <div class="container">
+            {{ include('_partials/flashes.html.twig') }}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
 
-        {% set frankenphp_hot_reload = app.request.server.get('FRANKENPHP_HOT_RELOAD') %}
-        {% if frankenphp_hot_reload %}
-        <meta name="frankenphp-hot-reload:url" content="{{ frankenphp_hot_reload }}">
-        <script src="https://cdn.jsdelivr.net/npm/idiomorph"></script>
-        <script src="https://cdn.jsdelivr.net/npm/frankenphp-hot-reload/+esm" type="module"></script>
-        {% endif %}
-    </head>
-    <body>
-        {% block body %}{% endblock %}
-    </body>
+    <footer class="site">
+        <div class="container">
+            <span>{{ app_title() }}</span>
+            <span>EatMyShort.Link · GPL-3.0</span>
+        </div>
+    </footer>
+{% endblock %}
+</body>
 </html>

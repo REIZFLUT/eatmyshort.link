@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.domains'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'nav.domains'|trans }}</h1>
+            <p class="sub">{{ 'domains.intro'|trans }}</p>
+        </div>
+        <a class="btn btn-primary" href="{{ path('app_admin_domain_new') }}">{{ 'domains.new'|trans }}</a>
+    </div>
+
+    <div class="card flush">
+        {% if rows is empty %}
+            <div class="empty">
+                <h2>{{ 'domains.empty_title'|trans }}</h2>
+                <p>{{ 'domains.empty_text'|trans }}</p>
+            </div>
+        {% else %}
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>{{ 'domain.hostname'|trans }}</th><th class="hide-sm">{{ 'domain.root_redirect_url'|trans }}</th><th class="hide-sm">{{ 'domain.not_found_url'|trans }}</th><th class="num">{{ 'nav.links'|trans }}</th></tr></thead>
+                    <tbody>
+                        {% for row in rows %}
+                            {% set d = row.domain %}
+                            <tr>
+                                <td>
+                                    <a href="{{ path('app_admin_domain_edit', {id: d.id}) }}"><strong>{{ d.displayName }}</strong></a>
+                                    {% if d.default %}<span class="badge badge-accent">{{ 'domain.default'|trans }}</span>{% endif %}
+                                    {% if not d.active %}<span class="badge badge-danger">{{ 'domain.inactive'|trans }}</span>{% endif %}
+                                </td>
+                                <td class="hide-sm small truncate">{{ d.rootRedirectUrl ?? '–' }}</td>
+                                <td class="hide-sm small truncate">{{ d.notFoundUrl ?? '–' }}{% if d.forwardUnknownPaths %} <span class="badge">/…</span>{% endif %}</td>
+                                <td class="num">{{ row.links }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="card" id="dns-hint">
+        <h2>{{ 'domains.setup_title'|trans }}</h2>
+        <p class="small">{{ 'domains.setup_text'|trans({'%host%': primary_admin_host()}) }}</p>
+    </div>
+{% endblock %}

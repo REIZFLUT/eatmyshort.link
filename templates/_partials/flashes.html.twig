@@ -1,0 +1,20 @@
+{% set flashes = app.flashes %}
+{% if flashes is not empty %}
+    <div class="flashes" role="status">
+        {% for type, messages in flashes %}
+            {% for message in messages %}
+                {% if type == 'link' %}
+                    <div class="flash flash-link">
+                        <div class="small muted">{{ 'flash.account_link_copy'|trans }}</div>
+                        <div class="copy-field">
+                            <input type="text" readonly value="{{ message }}" id="flash-link-{{ loop.index }}">
+                            <button type="button" class="btn btn-sm" data-copy-target="#flash-link-{{ loop.index }}" data-copied-label="{{ 'action.copied'|trans }}">{{ 'action.copy'|trans }}</button>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="flash flash-{{ type }}">{{ message|trans }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+{% endif %}

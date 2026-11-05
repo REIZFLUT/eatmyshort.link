@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ domain.id ? domain.displayName : 'domains.new'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="narrow">
+        <div class="page-head">
+            <h1>{{ domain.id ? domain.displayName : 'domains.new'|trans }}</h1>
+            <a class="btn btn-ghost" href="{{ path('app_admin_domains') }}">← {{ 'nav.domains'|trans }}</a>
+        </div>
+        {{ form_start(form) }}
+            <div class="card">
+                {{ form_widget(form) }}
+                <div class="form-actions">
+                    <button class="btn btn-primary">{{ 'action.save'|trans }}</button>
+                </div>
+            </div>
+        {{ form_end(form) }}
+
+        {% if domain.id %}
+            <div class="card danger">
+                <h2>{{ 'domains.delete'|trans }}</h2>
+                <p class="small muted">{{ 'domains.delete_text'|trans }}</p>
+                <form method="post" action="{{ path('app_admin_domain_delete', {id: domain.id}) }}" data-confirm="{{ 'domains.delete_confirm'|trans }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('domain-delete-' ~ domain.id) }}">
+                    <button class="btn btn-danger">{{ 'domains.delete'|trans }}</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

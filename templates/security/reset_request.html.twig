@@ -1,0 +1,19 @@
+{% extends 'minimal.html.twig' %}
+
+{% block title %}{{ 'reset.title'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <h1>{{ 'reset.title'|trans }}</h1>
+        <p class="muted">{{ 'reset.text'|trans }}</p>
+        <form method="post">
+            <div class="field">
+                <label for="email">{{ 'user.email'|trans }}</label>
+                <input type="email" id="email" name="email" autocomplete="username" required autofocus>
+            </div>
+            <input type="hidden" name="_token" value="{{ csrf_token('reset_request') }}">
+            <button type="submit" class="btn btn-primary btn-block">{{ 'reset.submit'|trans }}</button>
+        </form>
+        <p class="small"><a href="{{ path('app_login') }}">{{ 'action.back_to_login'|trans }}</a></p>
+    </div>
+{% endblock %}

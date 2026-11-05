@@ -1,0 +1,28 @@
+{% extends 'minimal.html.twig' %}
+
+{% block title %}{{ 'totp.login_title'|trans }}{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <h1>{{ 'totp.login_title'|trans }}</h1>
+        <p class="muted">{{ 'totp.login_text'|trans }}</p>
+
+        {% if authenticationError %}
+            <ul class="errors form-errors"><li>{{ authenticationError|trans(authenticationErrorData, 'SchebTwoFactorBundle') }}</li></ul>
+        {% endif %}
+
+        <form method="post" action="{{ checkPathUrl ? checkPathUrl : path(checkPathRoute) }}">
+            <div class="field">
+                <label for="_auth_code">{{ 'totp.code'|trans }}</label>
+                <input id="_auth_code" type="text" name="{{ authCodeParameterName }}" class="otp"
+                       autocomplete="one-time-code" inputmode="text" autofocus required maxlength="12">
+                <div class="help">{{ 'totp.backup_hint'|trans }}</div>
+            </div>
+            {% if isCsrfProtectionEnabled %}
+                <input type="hidden" name="{{ csrfParameterName }}" value="{{ csrf_token(csrfTokenId) }}">
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-block">{{ 'totp.verify'|trans }}</button>
+        </form>
+        <p class="small"><a href="{{ logoutPath }}">{{ 'action.cancel'|trans }}</a></p>
+    </div>
+{% endblock %}

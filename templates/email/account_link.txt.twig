@@ -1,0 +1,11 @@
+{{ ('mail.' ~ purpose ~ '.heading')|trans({'%title%': app_title()}) }}
+
+{{ 'mail.greeting'|trans({'%name%': user.displayName}) }}
+
+{{ ('mail.' ~ purpose ~ '.text')|trans({'%title%': app_title(), '%email%': user.email}) }}
+
+{{ url }}
+
+{{ 'mail.valid_until'|trans({'%date%': expires_at|date('d.m.Y H:i')}) }}
+
+{{ 'mail.ignore'|trans }}

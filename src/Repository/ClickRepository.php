@@ -75,7 +75,10 @@ class ClickRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
 
-        return array_map(static fn (array $row): array => ['value' => $row['value'], 'clicks' => (int) $row['clicks']], $rows);
+        return array_values(array_map(static fn (array $row): array => [
+            'value' => null === $row['value'] ? null : (string) $row['value'],
+            'clicks' => (int) $row['clicks'],
+        ], $rows));
     }
 
     /**
