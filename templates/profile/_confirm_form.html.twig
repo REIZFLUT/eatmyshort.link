@@ -20,6 +20,12 @@
         </div>
     </form>
 {% else %}
-    <p class="muted small">{{ 'profile.confirm_no_factor'|trans }}</p>
-    <p><a class="btn" href="{{ path('app_profile') }}">{{ 'profile.set_password'|trans }}</a></p>
+    {% if has_passkeys|default(false) %}
+        {# Passkey-only account: signing in with the passkey again is the confirmation. #}
+        <p class="muted small">{{ 'profile.confirm_passkey_hint'|trans }}</p>
+        <p><a class="btn btn-primary" href="{{ path('app_login', {reauth: 1}) }}">{{ 'profile.confirm_passkey_button'|trans }}</a></p>
+    {% else %}
+        <p class="muted small">{{ 'profile.confirm_no_factor'|trans }}</p>
+        <p><a class="btn" href="{{ path('app_profile') }}">{{ 'profile.set_password'|trans }}</a></p>
+    {% endif %}
 {% endif %}

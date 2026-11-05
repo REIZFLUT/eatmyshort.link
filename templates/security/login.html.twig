@@ -14,13 +14,17 @@
                 data-passkey="login"
                 data-options-url="{{ path('webauthn.controller.security.main.request.options') }}"
                 data-result-url="{{ path('webauthn.controller.security.main.request.result') }}"
-                data-success-url="{{ path('app_dashboard') }}"
+                data-success-url="{{ success_url }}"
                 data-error-message="{{ 'passkey.login_failed'|trans }}"
                 data-aborted-message="{{ 'passkey.aborted'|trans }}">
             {{ 'passkey.login'|trans }}
         </button>
         <p id="passkey-error" class="errors" hidden></p>
         <p id="passkey-unsupported" class="small muted" hidden>{{ 'passkey.unsupported'|trans }}</p>
+
+        {% if reauth %}
+            <p class="small muted">{{ 'login.reauth_hint'|trans }}</p>
+        {% endif %}
 
         <div class="divider">{{ 'login.or_password'|trans }}</div>
 

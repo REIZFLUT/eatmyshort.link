@@ -12,7 +12,7 @@ Built on a lean Symfony 8 core with SQLite, no Node build step and no background
   appended).
 - **Language-aware targets** – one short link, different target URLs depending on the browser language.
 - **Tracking without cookies** – clicks per day, unique visitors, referrers, devices, browsers, operating systems,
-  languages, optionally countries (local GeoIP database). No full IP addresses; bots are detected and not counted.
+  languages, optionally countries (local GeoIP database). No full IP addresses; bots are detected and never stored.
   Recording happens only after the redirect has been sent — no added latency.
 - **Multiple users** – everyone manages their own links, admins see everything; admins grant domains per user.
   Invitations by e-mail link, password reset, login throttling.

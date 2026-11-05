@@ -12,7 +12,7 @@ Gebaut auf einem schlanken Symfony-8-Kern mit SQLite, ohne Node-Build und ohne H
 - **Sprachabhängige Ziele** – ein Kurzlink, je nach Browsersprache unterschiedliche Ziel-URLs.
 - **Tracking ohne Cookies** – Klicks pro Tag, eindeutige Besucher, Herkunft, Geräte, Browser, Betriebssysteme,
   Sprachen, optional Länder (lokale GeoIP-Datenbank). Keine vollständigen IP-Adressen, Bots werden erkannt und
-  nicht gezählt. Erfasst wird erst nach dem Absenden der Weiterleitung – keine zusätzliche Wartezeit.
+  gar nicht erst gespeichert. Erfasst wird erst nach dem Absenden der Weiterleitung – keine zusätzliche Wartezeit.
 - **Mehrere Nutzer** – jeder verwaltet seine Links, Admins sehen alles; Admins geben Domains pro Nutzer frei.
   Einladung per E-Mail-Link, Passwort vergessen, Login-Drosselung.
 - **Admin-Bereich auf IP-Adressen/Netze einschränkbar** (IPv4/IPv6, CIDR) mit Aussperr-Schutz.

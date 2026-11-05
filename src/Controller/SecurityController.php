@@ -23,15 +23,20 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 final class SecurityController extends AbstractController
 {
     #[Route('/login', name: 'app_login', methods: ['GET', 'POST'])]
-    public function login(AuthenticationUtils $authenticationUtils): Response
+    public function login(Request $request, AuthenticationUtils $authenticationUtils): Response
     {
-        if ($this->isGranted('IS_AUTHENTICATED_FULLY')) {
+        // ?reauth=1 keeps the form reachable for users who are already signed in: the
+        // profile page uses it to re-authenticate with a passkey (see _confirm_form).
+        $reauth = $request->query->getBoolean('reauth');
+        if ($this->isGranted('IS_AUTHENTICATED_FULLY') && !$reauth) {
             return $this->redirectToRoute('app_dashboard');
         }
 
         return $this->render('security/login.html.twig', [
             'last_username' => $authenticationUtils->getLastUsername(),
             'error' => $authenticationUtils->getLastAuthenticationError(),
+            'reauth' => $reauth,
+            'success_url' => $this->generateUrl($reauth ? 'app_profile_security' : 'app_dashboard'),
         ]);
     }
 

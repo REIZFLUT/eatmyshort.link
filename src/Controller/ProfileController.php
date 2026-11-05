@@ -72,8 +72,11 @@ final class ProfileController extends AbstractController
     #[Route('/security', name: 'app_profile_security', methods: ['GET'])]
     public function security(Request $request, #[CurrentUser] User $user, SensitiveConfirmation $confirmation): Response
     {
+        $passkeys = $this->credentials->findByUser($user);
+
         return $this->render('profile/security.html.twig', [
-            'passkeys' => $this->credentials->findByUser($user),
+            'passkeys' => $passkeys,
+            'has_passkeys' => [] !== $passkeys,
             'backup_codes' => $request->getSession()->remove(self::BACKUP_CODES_SESSION_KEY),
             'sensitive_confirmed' => $confirmation->isConfirmed($request->getSession()),
         ]);
@@ -121,6 +124,7 @@ final class ProfileController extends AbstractController
 
         return $this->render('profile/confirm.html.twig', [
             'target' => $target,
+            'has_passkeys' => $this->credentials->countByUser($user) > 0,
             'error' => $error,
         ], new Response(status: null === $error ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY));
     }
@@ -289,6 +293,7 @@ final class ProfileController extends AbstractController
         return $this->render('profile/tokens.html.twig', [
             'tokens' => $tokens->findByUser($user),
             'plain_token' => $plain,
+            'has_passkeys' => $this->credentials->countByUser($user) > 0,
             'sensitive_confirmed' => $confirmation->isConfirmed($request->getSession()),
         ]);
     }

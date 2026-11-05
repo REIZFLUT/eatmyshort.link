@@ -29,6 +29,7 @@ login.or_password: or with password
 login.password: Password
 login.submit: Sign in
 login.forgot: Forgot your password?
+login.reauth_hint: You are already signed in. Sign in again to unlock security-relevant actions.
 
 passkey.title: Passkeys
 passkey.login: Sign in with a passkey
@@ -202,6 +203,8 @@ profile.confirm_password: Password
 profile.confirm_button: Confirm
 profile.confirm_failed: The confirmation failed. Please check your input.
 profile.confirm_no_factor: This account has no password and no two-factor code to confirm with yet. Set a password first.
+profile.confirm_passkey_hint: This account signs in with a passkey. Sign in with the passkey once more – security-relevant actions are then unlocked for five minutes.
+profile.confirm_passkey_button: Confirm with passkey
 
 api.intro: Personal access tokens for the REST API. A token acts with your permissions.
 api.new_token: New token

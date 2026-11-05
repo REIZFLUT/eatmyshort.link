@@ -94,10 +94,8 @@ final class ApiTest extends AppTestCase
         $this->api('POST', '/api/v1/links', $token, [
             'target_url' => 'https://www.example.com/doppelt',
             'code' => 'doppelt',
-            'localisations' => [
-                ['language' => 'en', 'target_url' => 'https://www.example.com/en'],
-                ['language' => 'EN', 'target_url' => 'https://www.example.com/en-2'],
-            ],
+            // The audit's reproduction: two keys that normalise to the same language.
+            'localisations' => ['en' => 'https://www.example.com/en', 'EN' => 'https://www.example.com/en-2'],
         ]);
 
         self::assertResponseStatusCodeSame(422, 'a duplicate language must not become a database 500');
