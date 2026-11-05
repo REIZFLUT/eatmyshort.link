@@ -2,6 +2,26 @@
 // import map, which the Content-Security-Policy (rightly) blocks.
 import { initPasskeys } from './js/passkey.js';
 
+// Browsers only offer the Clipboard API on HTTPS (or localhost). Plain-HTTP installs,
+// e.g. reached via IP and port, fall back to the classic copy command on a hidden textarea.
+async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+    const buffer = document.createElement('textarea');
+    buffer.value = text;
+    buffer.setAttribute('readonly', '');
+    buffer.className = 'copy-buffer';
+    document.body.append(buffer);
+    buffer.select();
+    const copied = document.execCommand('copy');
+    buffer.remove();
+    if (!copied) {
+        throw new Error('copy command rejected');
+    }
+}
+
 // Copy buttons: <button data-copy="text"> or data-copy-target="#input">
 document.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-copy], [data-copy-target]');
@@ -9,12 +29,15 @@ document.addEventListener('click', async (event) => {
     const target = button.dataset.copyTarget ? document.querySelector(button.dataset.copyTarget) : null;
     const text = target ? target.value ?? target.textContent : button.dataset.copy;
     try {
-        await navigator.clipboard.writeText(text);
-        const label = button.textContent;
+        await copyText(text);
+        button.dataset.label ??= button.textContent;
         button.textContent = button.dataset.copiedLabel || '✓';
-        setTimeout(() => { button.textContent = label; }, 1500);
+        clearTimeout(button.copyTimer);
+        button.copyTimer = setTimeout(() => { button.textContent = button.dataset.label; }, 1500);
+        button.focus();
     } catch {
-        target?.select?.();
+        // Last resort: show the text so it can be copied by hand.
+        window.prompt(document.body.dataset.copyPrompt || '', text);
     }
 });
 

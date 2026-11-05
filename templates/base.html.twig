@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ path('app_branding_css') }}">
     {% block importmap %}{{ importmap('app', {nonce: csp_nonce()}) }}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}" data-copy-prompt="{{ 'action.copy_manually'|trans }}">
 {% block body %}
     {% set route = app.request.attributes.get('_route') ?? '' %}
     <header class="topbar">

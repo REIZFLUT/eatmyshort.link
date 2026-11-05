@@ -2,6 +2,7 @@ action.back_to_login: Back to sign-in
 action.cancel: Cancel
 action.copied: Copied ✓
 action.copy: Copy
+action.copy_manually: 'Press Ctrl+C (Mac: ⌘+C) to copy'
 action.delete: Delete
 action.edit: Edit
 action.remove: Remove

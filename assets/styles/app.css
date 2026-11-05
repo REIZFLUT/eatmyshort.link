@@ -345,3 +345,4 @@ footer.site .container { display: flex; justify-content: space-between; gap: 12p
 #dns-hint { margin-top: 20px; }
 .copy-field.rename-field input { font-family: inherit; }
 @media (max-width: 720px) { .stat .value { font-size: 1.35rem; } .stat { padding: 12px 14px; } }
+.copy-buffer { position: fixed; top: 0; left: -9999px; width: 1px; height: 1px; opacity: 0; }
