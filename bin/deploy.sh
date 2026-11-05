@@ -145,9 +145,21 @@ resolve_fpm_reload() {
         return 0
     fi
 
-    local unit="" master=""
+    local unit="" master="" units="" wanted=""
     if command -v systemctl >/dev/null 2>&1; then
-        unit="$(systemctl list-units --type=service --plain --no-legend 'php*-fpm.service' 2>/dev/null | awk 'NR == 1 {print $1}')" || true
+        units="$(systemctl list-units --type=service --plain --no-legend 'php*-fpm.service' 2>/dev/null | awk '{print $1}')" || true
+    fi
+
+    # Hosts often run several PHP versions (7.4 next to 8.4). Reloading the wrong pool
+    # would leave the app's own opcache stale, so pick the unit that matches the PHP
+    # running this script; anything else has to be chosen explicitly.
+    wanted="php$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')-fpm.service"
+    if printf '%s\n' $units | grep -qx -- "$wanted"; then
+        unit="$wanted"
+    elif [[ "$(printf '%s\n' $units | grep -c .)" == "1" ]]; then
+        unit="$(printf '%s\n' $units | grep .)"
+    else
+        unit=""
     fi
 
     if [[ "$(id -u)" == "0" ]]; then
@@ -172,6 +184,10 @@ resolve_fpm_reload() {
 
     printf 'FEHLER: Kein Weg gefunden, PHP-FPM neu zu laden.\n' >&2
     printf '        Das Skript laeuft als %s; systemctl reload braucht Root-Rechte.\n' "$(id -un)" >&2
+    if [[ -n "$units" ]]; then
+        printf '        Gefundene FPM-Units: %s\n' "$(printf '%s ' $units)" >&2
+        printf '        Mehrere PHP-Versionen: die Unit der App-Version waere %s.\n' "$wanted" >&2
+    fi
     printf '        Entweder als root/sudo ausfuehren, passwortloses sudo fuer systemctl\n' >&2
     printf '        einrichten oder PHP_FPM_RELOAD setzen, z. B.\n' >&2
     printf '        PHP_FPM_RELOAD="sudo -n systemctl reload php8.4-fpm".\n' >&2
