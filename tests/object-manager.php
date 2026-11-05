@@ -3,19 +3,25 @@
 declare(strict_types=1);
 
 use App\Kernel;
-use Symfony\Component\Dotenv\Dotenv;
 
-$loader = require __DIR__.'/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-// Same worktree caveat as tests/bootstrap.php: the shared vendor symlink resolves App\
-// to the main checkout, so point the loader at this tree before the kernel is built.
-if ($loader instanceof Composer\Autoload\ClassLoader) {
-    $loader->setPsr4('App\\', [dirname(__DIR__).'/src']);
+// PHPStan (phpstan-doctrine) bootet hier einen ObjectManager. Seit dem Entfernen der
+// .env-Dateien liefert dieses Skript die dafuer noetigen Werte selbst - nur fuer die
+// statische Analyse, nicht fuer den echten Betrieb.
+foreach ([
+    'APP_ENV' => 'dev',
+    'APP_SECRET' => 'phpstan-analysis-secret-0123456789abcdef',
+    'APP_ADMIN_HOSTS' => 'localhost',
+    'DEFAULT_URI' => 'http://localhost',
+    'DATABASE_URL' => 'sqlite:///%kernel.project_dir%/var/data/eatmyshort.sqlite',
+    'MAILER_DSN' => 'null://null',
+] as $name => $value) {
+    $_SERVER[$name] ??= $_ENV[$name] ?? $value;
+    $_ENV[$name] = $_SERVER[$name];
 }
 
-new Dotenv()->bootEnv(__DIR__.'/../.env');
-
-$kernel = new Kernel($_SERVER['APP_ENV'], (bool) $_SERVER['APP_DEBUG']);
+$kernel = new Kernel($_SERVER['APP_ENV'], (bool) ($_SERVER['APP_DEBUG'] ?? false));
 $kernel->boot();
 
 return $kernel->getContainer()->get('doctrine')->getManager();

@@ -8,9 +8,16 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     env:
-      # The app refuses to boot in prod without a real secret (Kernel + AppSecretCheck).
-      # This value only exists inside the CI job and is never used in production.
+      # Without .env in the repository the app needs real environment variables.
+      # In production the kernel refuses to boot without a real APP_SECRET
+      # (AppSecretCheck); this value exists only inside the CI job.
+      APP_ENV: dev
       APP_SECRET: 'ci-only-secret-0123456789abcdef0123456789abcdef'
+      APP_ADMIN_HOSTS: admin.emsl.test
+      DEFAULT_URI: http://localhost
+      DATABASE_URL: 'sqlite:///%kernel.project_dir%/var/data/ci.sqlite'
+      MAILER_DSN: null://null
+      MAILER_FROM: 'EatMyShort.Link <noreply@localhost>'
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       - uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # 2.36.0
