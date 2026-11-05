@@ -29,7 +29,7 @@ Alle Namen zeigen per DNS (A/AAAA oder CNAME) auf denselben Server und landen im
 cd /var/www
 git clone https://github.com/REIZFLUT/eatmyshort.link.git eatmyshort
 cd eatmyshort
-cp docs/examples/env.local.dist .env.local      # Werte anpassen, siehe unten
+cp docs/examples/env.local.dist .env.local      # zuerst APP_SECRET setzen, siehe unten
 composer install --no-dev --optimize-autoloader --classmap-authoritative
 php bin/console doctrine:migrations:migrate --no-interaction
 php bin/console asset-map:compile
@@ -37,25 +37,31 @@ php bin/console app:user:create admin@firma.de "Vorname Nachname" --admin
 php bin/console app:domain:add go.firma.de --root=https://www.firma.de --default
 ```
 
-`var/` (Cache, Logs, `var/data/eatmyshort.sqlite` samt `-wal`/`-shm`) muss für den
-PHP-FPM-Nutzer beschreibbar sein:
+`var/` (Cache, Logs in `var/log`, Sessions in `var/sessions`,
+`var/data/eatmyshort.sqlite` samt `-wal`/`-shm`) muss für den PHP-FPM-Nutzer
+gehören und beschreibbar sein:
 
 ```bash
+mkdir -p var/log var/sessions var/data
 chown -R www-data:www-data var
 ```
+
+`var/log` und `var/sessions` müssen beschreibbar bleiben: Produktionslogs landen in
+`var/log/prod.log` (rotierend, 14 Dateien), und ohne beschreibbares `var/sessions`
+gehen Anmeldungen verloren.
 
 ### `.env.local`
 
 | Variable | Bedeutung |
 |---|---|
 | `APP_ENV=prod` | Produktivmodus |
-| `APP_SECRET` | 32+ zufällige Zeichen (`php -r "echo bin2hex(random_bytes(16));"`). Verschlüsselt auch die TOTP-Schlüssel – **nicht nachträglich ändern**, sonst müssen alle Nutzer TOTP neu einrichten. |
+| `APP_SECRET` | 32+ zufällige Zeichen (`php -r "echo bin2hex(random_bytes(16));"`). Verschlüsselt auch die TOTP-Schlüssel – **nicht nachträglich ändern**, sonst müssen alle Nutzer TOTP neu einrichten. Wird beim Start in `prod` geprüft: leer, zu kurz oder ein Platzhalter aus der Vorlage bricht den Boot ab (auch bei Konsolenbefehlen). |
 | `APP_ADMIN_HOSTS` | Admin-Host(s), kommagetrennt |
 | `DEFAULT_URI` | `https://<admin-host>` (Links in Konsolenausgaben) |
 | `DATABASE_URL` | Standard: `sqlite:///%kernel.project_dir%/var/data/eatmyshort.sqlite` |
 | `MAILER_DSN`, `MAILER_FROM` | z. B. `smtp://user:pass@smtp.firma.de:587` |
 | `ADMIN_IP_ALLOWLIST` | IPs/Netze, die `/admin` **immer** öffnen dürfen (Aussperr-Schutz), kommagetrennt |
-| `TRUSTED_PROXIES` | nur hinter Reverse-Proxy/Load-Balancer: dessen IPs. Sonst leer lassen – die IP-Sperre verlässt sich auf die richtige Client-IP. |
+| `TRUSTED_PROXIES` | nur hinter Reverse-Proxy/Load-Balancer: **nur dessen IPs** (z. B. `10.0.0.5,10.0.0.6`), niemals `REMOTE_ADDR`. Sonst glaubt die App jedem Client-Header und die IP-Sperre ist mit einem gefälschten `X-Forwarded-For` umgehbar. Leer = keine Proxys. |
 | `APP_TIMEZONE` | Zeitzone der Statistik, Standard `Europe/Berlin` |
 | `GEOIP_DATABASE_PATH` | optional, Pfad zu `GeoLite2-Country.mmdb` (MaxMind, kostenloses Konto) oder `dbip-country-lite.mmdb` (DB-IP, CC BY 4.0) |
 | `CLICK_RETENTION_DAYS` | Aufbewahrung der Klicks, Standard 730, `0` = unbegrenzt |
@@ -77,15 +83,36 @@ HTTP leitet auf HTTPS um.
 30 3 * * *  www-data  php /var/www/eatmyshort/bin/console app:db:backup --quiet && find /var/www/eatmyshort/var/backup -name '*.sqlite' -mtime +14 -delete
 ```
 
+`app:db:backup` sichert **nur die Datenbank**. `.env.local` gehört in ein separates,
+verschlüsseltes Backup, insbesondere `APP_SECRET`: Daraus werden die TOTP-Schlüssel
+der Nutzer abgeleitet. Ohne diesen Wert sind die Seeds nach einem Serververlust
+unwiederbringlich.
+
 ## Updates
 
 ```bash
+bin/deploy.sh --dry-run   # zeigt nur die Schritte, ändert nichts
 bin/deploy.sh
 ```
 
-Holt den neuen Stand (`git pull --ff-only`), installiert Abhängigkeiten, führt
-Migrationen aus, kompiliert Assets und leert den Cache. Vorher ein Backup:
-`php bin/console app:db:backup`.
+Das Skript prüft die Voraussetzungen, schreibt ein Datenbank-Backup
+(`SKIP_BACKUP=1` überspringt es), aktiviert den Wartungsmodus (`var/maintenance`),
+holt den neuen Stand (`git pull --ff-only`), installiert die Abhängigkeiten ohne
+Dev-Pakete, führt Migrationen aus, kompiliert die Assets, leert und wärmt den
+Prod-Cache, lädt PHP-FPM neu und prüft danach `GET /healthz`. Schlägt ein Schritt
+zwischen Pull und FPM-Reload fehl, wird der alte Commit wiederhergestellt
+(`ALLOW_ROLLBACK=0` deaktiviert das) und der Wartungsmodus beendet.
+
+Der FPM-Reload ist Pflicht, weil unten `opcache.validate_timestamps=0` empfohlen
+wird: ohne Reload läuft der alte Code gegen den neuen Container. Das Skript erkennt
+`php*-fpm`-Units per systemd und fällt sonst auf `php-fpm -USR2` zurück; mit
+`PHP_FPM_RELOAD='systemctl reload php8.4-fpm'` lässt sich der Befehl fest vorgeben.
+Der Healthcheck nutzt `HEALTH_URL` oder leitet die URL aus `DEFAULT_URI` ab
+(Standard `http://127.0.0.1/healthz`).
+
+Release-Verzeichnisse mit symlink-Umschaltung sind die sauberere Variante: Der
+Wechsel ist atomar und ein Rollback braucht kein `git reset`. Dieses Projekt bleibt
+beim In-Place-Layout, weil das Hosting so eingerichtet ist.
 
 ## Sicherheit im Betrieb
 
@@ -95,6 +122,11 @@ Migrationen aus, kompiliert Assets und leert den Cache. Vorher ein Backup:
   Passkeys gelten als vollwertiger zweiter Faktor.
 - **Passkeys** brauchen HTTPS und funktionieren nur unter dem ersten Host aus `APP_ADMIN_HOSTS`.
 - Kurzdomains setzen keine Cookies und kennen keine Login- oder Admin-Routen.
+- **`.env.local` separat sichern**: Die Datei enthält `APP_SECRET`, aus dem die
+  TOTP-Schlüssel abgeleitet werden. `app:db:backup` sichert sie nicht mit; ohne eine
+  verschlüsselte Kopie sind die Seeds nach einem Serververlust unwiederbringlich.
+- **`/healthz`** ist ohne Login erreichbar und meldet nur `{"status":"ok"}` bzw. bei
+  Datenbankfehlern `{"status":"error"}` mit HTTP 503 – ohne interne Details.
 
 ## Leistung
 
@@ -115,6 +147,9 @@ Für Produktion:
 ## Wechsel auf MariaDB/MySQL oder PostgreSQL
 
 SQLite im WAL-Modus reicht für typische Unternehmenslasten. Wer trotzdem einen
-Datenbankserver will: `DATABASE_URL` umstellen und Migrationen ausführen
-(`doctrine:migrations:migrate`). Die Abfragen sind portabel; `app:db:backup` funktioniert
-dann nicht mehr, dafür die Werkzeuge der Datenbank nutzen.
+Datenbankserver will, muss mehr tun als `DATABASE_URL` umzustellen: Die mitgelieferten
+Migrationen sind reines SQLite-DDL (`AUTOINCREMENT`, `CLOB` und Ähnliches) und laufen
+auf MariaDB/MySQL oder PostgreSQL nicht. Nötig sind ein eigener Migrationssatz bzw.
+eine Portierung des Schemas und ein Test der Abfragen auf der Zieldatenbank.
+`app:db:backup` funktioniert danach nicht mehr (es unterstützt nur SQLite); Backups
+laufen über die Werkzeuge der Datenbank.

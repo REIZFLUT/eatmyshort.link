@@ -9,6 +9,7 @@ use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\HttpFoundation\Session\Storage\Handler\StrictSessionHandler;
 
 final class InfrastructureTest extends KernelTestCase
 {
@@ -18,6 +19,23 @@ final class InfrastructureTest extends KernelTestCase
 
         self::assertSame('wal', strtolower((string) $connection->fetchOne('PRAGMA journal_mode')));
         self::assertSame(1, (int) $connection->fetchOne('PRAGMA foreign_keys'));
+    }
+
+    public function testSessionFilesLiveInProjectDirectory(): void
+    {
+        $container = static::getContainer();
+
+        // Without an explicit save_path sessions end up in /var/lib/php/sessions, which
+        // Debian's cron purges after the php.ini gc_maxlifetime (1440s) -> logout after ~24min.
+        self::assertSame(
+            $container->getParameter('kernel.project_dir').'/var/sessions',
+            $container->getParameter('session.save_path'),
+        );
+        self::assertInstanceOf(
+            StrictSessionHandler::class,
+            $container->get('session.handler'),
+            'the session handler must be session.handler.native_file',
+        );
     }
 
     public function testAdminIpCommand(): void

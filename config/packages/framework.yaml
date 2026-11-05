@@ -2,9 +2,14 @@
 framework:
     secret: '%env(APP_SECRET)%'
     trusted_proxies: '%env(default::TRUSTED_PROXIES)%'
-    trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-port']
 
     session:
+        # Symfony's defaults live in /var/lib/php/sessions, where Debian's cron purges
+        # files after the php.ini gc_maxlifetime (1440s). Keeping sessions inside the
+        # project makes gc_maxlifetime below authoritative and logs users out after 8h.
+        handler_id: session.handler.native_file
+        save_path: '%kernel.project_dir%/var/sessions'
         name: emsl_session
         cookie_secure: auto
         cookie_samesite: lax

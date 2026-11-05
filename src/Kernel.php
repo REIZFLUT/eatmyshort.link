@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Security\AppSecretCheck;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 
@@ -18,6 +19,13 @@ class Kernel extends BaseKernel
         date_default_timezone_set(\is_string($timezone) && '' !== $timezone ? $timezone : 'Europe/Berlin');
 
         parent::boot();
+
+        // Fail fast in production, including for console commands: TOTP seeds are only
+        // recoverable with the real APP_SECRET, and a shipped placeholder would make
+        // them decryptable for anybody who knows the template.
+        if ('prod' === $this->getEnvironment()) {
+            AppSecretCheck::assertUsable((string) $this->getContainer()->getParameter('kernel.secret'));
+        }
     }
 
     /**
