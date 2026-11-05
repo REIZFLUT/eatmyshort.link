@@ -18,17 +18,22 @@ declare(strict_types=1);
 
 $projectDir = dirname(__DIR__);
 
+// PHP-CLI-Server und FPM-Pools ohne "E" in variables_order stellen Prozess-
+// Umgebungsvariablen nur ueber getenv() bereit, nicht in $_SERVER/$_ENV. Dotenv und
+// die env-Prozessoren von Symfony lesen aber $_SERVER/$_ENV - ohne diesen Schritt
+// wuerde eine vorhandene .env.local die echten (z. B. im FPM-Pool gesetzten) Werte
+// ueberschreiben. Nur HTTP_/REDIRECT_ (vom SAPI aus Request-Headern gefuellt) bleiben
+// aussen vor; vorhandene Eintraege werden nie ueberschrieben.
+foreach (getenv() as $name => $value) {
+    if ('' === $name || str_starts_with($name, 'HTTP_') || str_starts_with($name, 'REDIRECT_')) {
+        continue;
+    }
+    $_SERVER[$name] ??= $value;
+    $_ENV[$name] ??= $value;
+}
+
 // APP_ENV vor dem Runtime-Lauf aus der echten Umgebung lesen.
 $env = $_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? null;
-
-// Der PHP-CLI-Server und FPM-Pools ohne "E" in variables_order stellen Prozess-
-// Umgebungsvariablen nur ueber getenv() bereit. Deshalb hier nachziehen und in
-// $_SERVER/$_ENV spiegeln, damit auch der Symfony-Runtime APP_ENV sieht (sonst
-// wuerde er beim deaktivierten Dotenv still auf "dev" zurueckfallen).
-if (null === $env && false !== $value = getenv('APP_ENV')) {
-    $env = $value;
-    $_SERVER['APP_ENV'] = $_ENV['APP_ENV'] = $value;
-}
 
 // Zu verwendende dot-env-Datei bestimmen (null = keine vorhanden).
 $dotenvFile = null;

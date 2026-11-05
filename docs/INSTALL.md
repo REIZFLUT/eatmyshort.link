@@ -88,6 +88,12 @@ Meldung ab, statt still im Dev-Modus (mit Debug) zu laufen.
 keine Umgebungsvariablen mit – sie bleiben im FPM-Pool bzw. in einer nicht
 versionierten `.env`-Datei auf dem Server.
 
+**Bestehende Installation aktualisieren:** Früher kamen `APP_SECRET` und `DATABASE_URL`
+aus der eingecheckten `.env`. Beim Umstieg diese beiden Werte in die eigene
+`.env.local` übernehmen (oder als echte Umgebungsvariablen setzen), sonst bricht der
+Start mit `Environment variable not found: "DATABASE_URL"` ab. `APP_SECRET` muss dabei
+**unverändert** bleiben, sonst sind die gespeicherten TOTP-Schlüssel nicht mehr lesbar.
+
 ### `.env.local`
 
 | Variable | Bedeutung |
