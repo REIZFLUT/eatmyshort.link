@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Link;
 
 use App\Entity\Domain;
+use App\Event\Link\ShortCodeGeneratingEvent;
 use App\Repository\LinkRepository;
 use App\Settings\Settings;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Random codes use lowercase letters and digits without look-alikes (0/o, 1/l/i),
@@ -29,6 +31,7 @@ final class ShortCodeGenerator
     public function __construct(
         private readonly LinkRepository $links,
         private readonly Settings $settings,
+        private readonly EventDispatcherInterface $dispatcher,
     ) {
     }
 
@@ -52,6 +55,21 @@ final class ShortCodeGenerator
     public function generate(Domain $domain): string
     {
         $length = $this->settings->getInt(Settings::CODE_LENGTH);
+
+        // A plugin may suggest a code for this call (readable slug, campaign prefix). The
+        // suggestion is only a hint: it has to pass the same format rules the validator
+        // enforces and must still be free on the domain, otherwise generation falls back to
+        // a random code. That way a plugin can never produce a collision or break a rule.
+        $generating = new ShortCodeGeneratingEvent($domain, $length);
+        $this->dispatcher->dispatch($generating);
+        $suggested = $generating->getShortCode();
+        if (null !== $suggested) {
+            $suggested = mb_strtolower(trim($suggested, " \t\n\r\0\x0B/"));
+            if (1 === preg_match(self::PATTERN, $suggested) && !self::isReserved($suggested) && !$this->links->codeExists($domain, $suggested)) {
+                return $suggested;
+            }
+        }
+
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; ++$attempt) {
             $code = self::random($length + intdiv($attempt - 1, 5));
             if (!self::isReserved($code) && !$this->links->codeExists($domain, $code)) {
