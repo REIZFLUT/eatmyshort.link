@@ -1,12 +1,15 @@
 # Installation (klassisches PHP-Hosting)
 
-EatMyShort.Link braucht keinen Datenbankserver, keinen Node-Build und keinen
-Queue-Worker: PHP-FPM, ein Webserver und eine SQLite-Datei reichen.
+EatMyShort.Link braucht standardmäßig keinen Datenbankserver, keinen Node-Build und
+keinen Queue-Worker: PHP-FPM, ein Webserver und eine SQLite-Datei reichen. Wer trotzdem
+einen Datenbankserver betreiben will, schaltet in der `.env` auf MariaDB/MySQL um - siehe
+*Datenbank wählen*.
 
 ## Voraussetzungen
 
 - PHP **8.4** (oder 8.5) mit `ctype`, `iconv`, `intl`, `pdo_sqlite`, `sodium`, `mbstring`;
-  empfohlen `apcu` und `opcache`, für PNG-QR-Codes `gd`
+  für MariaDB/MySQL zusätzlich `pdo_mysql`; empfohlen `apcu` und `opcache`, für
+  PNG-QR-Codes `gd`
 - Composer 2
 - nginx oder Apache, TLS-Zertifikate (z. B. Let's Encrypt) für Admin-Host und alle Kurzdomains
 - ausgehender SMTP-Zugang für Einladungen und Passwort-Links (optional; ohne Mailer zeigt
@@ -89,10 +92,12 @@ keine Umgebungsvariablen mit – sie bleiben im FPM-Pool bzw. in einer nicht
 versionierten `.env`-Datei auf dem Server.
 
 **Bestehende Installation aktualisieren:** Früher kamen `APP_SECRET` und `DATABASE_URL`
-aus der eingecheckten `.env`. Beim Umstieg diese beiden Werte in die eigene
-`.env.local` übernehmen (oder als echte Umgebungsvariablen setzen), sonst bricht der
-Start mit `Environment variable not found: "DATABASE_URL"` ab. `APP_SECRET` muss dabei
-**unverändert** bleiben, sonst sind die gespeicherten TOTP-Schlüssel nicht mehr lesbar.
+aus der eingecheckten `.env`. `APP_SECRET` aus der alten `.env` in die eigene `.env.local`
+übernehmen (oder als echte Umgebungsvariable setzen) und **unverändert** lassen, sonst sind
+die gespeicherten TOTP-Schlüssel nicht mehr lesbar. `DATABASE_URL` ist inzwischen optional:
+ohne sie läuft die App auf SQLite in `var/data/eatmyshort.sqlite`. Wer die bisherige
+Datenbank behalten will, übernimmt den alten Wert entweder weiter als `DATABASE_URL` oder
+stellt auf die `DB_*`-Variablen um.
 
 ### `.env.local`
 
@@ -102,13 +107,75 @@ Start mit `Environment variable not found: "DATABASE_URL"` ab. `APP_SECRET` muss
 | `APP_SECRET` | 32+ zufällige Zeichen (`php -r "echo bin2hex(random_bytes(16));"`). Verschlüsselt auch die TOTP-Schlüssel – **nicht nachträglich ändern**, sonst müssen alle Nutzer TOTP neu einrichten. Wird beim Start in `prod` geprüft: leer, zu kurz oder ein Platzhalter aus der Vorlage bricht den Boot ab (auch bei Konsolenbefehlen). |
 | `APP_ADMIN_HOSTS` | Admin-Host(s), kommagetrennt |
 | `DEFAULT_URI` | `https://<admin-host>` (Links in Konsolenausgaben) |
-| `DATABASE_URL` | Standard: `sqlite:///%kernel.project_dir%/var/data/eatmyshort.sqlite` |
+| `DB_CONNECTION` | `sqlite` (Default), `mysql` oder `mariadb` – ohne Angabe läuft alles auf SQLite |
+| `DB_DATABASE` | SQLite: Pfad zur Datei (relativ zum Projektverzeichnis oder absolut); MariaDB/MySQL: Datenbankname |
+| `DB_HOST`, `DB_PORT` | MariaDB/MySQL, Standard `127.0.0.1` und `3306` |
+| `DB_USERNAME`, `DB_PASSWORD` | MariaDB/MySQL; Sonderzeichen im Passwort sind erlaubt |
+| `DB_SOCKET` | MariaDB/MySQL über Unix-Socket – ersetzt `DB_HOST`/`DB_PORT` |
+| `DB_CHARSET` | Zeichensatz, Standard `utf8mb4` |
+| `DB_SERVER_VERSION` | optional: Serverversion festnageln (z. B. `mariadb-11.4.0`), sonst wird sie beim Verbinden erkannt |
+| `DATABASE_URL` | optionaler Override; hat **immer** Vorrang vor allen `DB_*`-Werten. Ohne DATABASE_URL wird die DSN aus den `DB_*`-Variablen gebaut (Default: SQLite unter `var/data/eatmyshort.sqlite`) |
 | `MAILER_DSN`, `MAILER_FROM` | z. B. `smtp://user:pass@smtp.firma.de:587` |
 | `ADMIN_IP_ALLOWLIST` | IPs/Netze, die `/admin` **immer** öffnen dürfen (Aussperr-Schutz), kommagetrennt |
 | `TRUSTED_PROXIES` | nur hinter Reverse-Proxy/Load-Balancer: **nur dessen IPs** (z. B. `10.0.0.5,10.0.0.6`), niemals `REMOTE_ADDR`. Sonst glaubt die App jedem Client-Header und die IP-Sperre ist mit einem gefälschten `X-Forwarded-For` umgehbar. Leer = keine Proxys. |
 | `APP_TIMEZONE` | Zeitzone der Statistik, Standard `Europe/Berlin` |
 | `GEOIP_DATABASE_PATH` | optional, Pfad zu `GeoLite2-Country.mmdb` (MaxMind, kostenloses Konto) oder `dbip-country-lite.mmdb` (DB-IP, CC BY 4.0) |
 | `CLICK_RETENTION_DAYS` | Aufbewahrung der Klicks, Standard 730, `0` = unbegrenzt |
+
+## Datenbank wählen
+
+Ohne weitere Angabe läuft die App auf SQLite (`var/data/eatmyshort.sqlite`). Wer einen
+Datenbankserver will, stellt in der `.env` auf MariaDB/MySQL um:
+
+```ini
+DB_CONNECTION=mariadb        # sqlite (Default) | mysql | mariadb (Aliase, derselbe Treiber)
+DB_DATABASE=eatmyshort
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USERNAME=eatmyshort
+DB_PASSWORD=...
+DB_CHARSET=utf8mb4
+```
+
+Regeln:
+
+- **`DATABASE_URL` gewinnt immer.** Ist sie gesetzt (echte Umgebungsvariable oder
+  dot-env-Datei), wird sie unverändert benutzt und die `DB_*`-Variablen werden ignoriert –
+  die beiden Schemata werden nie gemischt.
+- Vorrang der Quellen: echte Umgebungsvariablen > `.env.local` > `.env`.
+- Ein unbekanntes `DB_CONNECTION` bricht den Start mit klarer Meldung ab, statt still auf
+  SQLite zurückzufallen.
+- Sonderzeichen in `DB_USERNAME`/`DB_PASSWORD` sind erlaubt (werden URL-kodiert).
+- `DB_SOCKET` verbindet über einen Unix-Socket und ersetzt dann `DB_HOST`/`DB_PORT`.
+- `DB_SERVER_VERSION` (z. B. `mariadb-11.4.0`) nagelt die Serverversion fest; ohne den Wert
+  wird sie beim Verbinden erkannt (gilt für SQLite wie MariaDB/MySQL).
+- Setzt man `DATABASE_URL` von Hand mit URL-kodierten Zugangsdaten, muss ein `%` als `%%`
+  geschrieben werden (Regel des `resolve`-Prozessors); die `DB_*`-Variablen erledigen die
+  Kodierung selbst.
+
+Datenbank und Nutzer anlegen:
+
+```sql
+CREATE DATABASE eatmyshort CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'eatmyshort'@'localhost' IDENTIFIED BY '<passwort>';
+GRANT ALL PRIVILEGES ON eatmyshort.* TO 'eatmyshort'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Danach die `DB_*`-Werte in der `.env` setzen und migrieren:
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction
+```
+
+Die Migrationen sind treiberneutral: der Lauf erzeugt das Schema auf der leeren
+MariaDB/MySQL-Datenbank genauso wie auf SQLite.
+
+Backups übernimmt `app:db:backup` für beide Treiber: SQLite per `VACUUM INTO`,
+MariaDB/MySQL per `mariadb-dump` bzw. `mysqldump` (`--single-transaction --quick`,
+Zugangsdaten über `MYSQL_PWD` statt auf der Kommandozeile). Das Ziel endet auf `.sql` oder
+`.sql.gz`. Liegt keines der Werkzeuge im `PATH`, meldet der Befehl das mit Namen – dann das
+Client-Paket (`mariadb-client`/`mysql-client`) installieren.
 
 ## Webserver
 
@@ -123,8 +190,9 @@ HTTP leitet auf HTTPS um.
 ```cron
 # Klicks älter als CLICK_RETENTION_DAYS löschen
 15 3 * * *  www-data  php /var/www/eatmyshort/bin/console app:clicks:prune --quiet
-# Sicherung der SQLite-Datenbank (konsistent im laufenden Betrieb), 14 Tage behalten
-30 3 * * *  www-data  php /var/www/eatmyshort/bin/console app:db:backup --quiet && find /var/www/eatmyshort/var/backup -name '*.sqlite' -mtime +14 -delete
+# Sicherung der Datenbank (konsistent im laufenden Betrieb), 14 Tage behalten.
+# SQLite-Sicherungen enden auf .sqlite, MariaDB/MySQL-Sicherungen auf .sql.gz.
+30 3 * * *  www-data  php /var/www/eatmyshort/bin/console app:db:backup --quiet && find /var/www/eatmyshort/var/backup \( -name '*.sqlite' -o -name '*.sql.gz' \) -mtime +14 -delete
 # Abgelaufene Cache-Einträge entfernen (u. a. die Zähler des Tracking-Rate-Limiters)
 45 3 * * *  www-data  php /var/www/eatmyshort/bin/console cache:pool:prune --quiet
 # GeoIP-Datenbank monatlich erneuern (DB-IP Lite, CC BY 4.0). Erst laden, dann ersetzen:
@@ -238,10 +306,13 @@ Für Produktion:
 
 ## Wechsel auf MariaDB/MySQL oder PostgreSQL
 
-SQLite im WAL-Modus reicht für typische Unternehmenslasten. Wer trotzdem einen
-Datenbankserver will, muss mehr tun als `DATABASE_URL` umzustellen: Die mitgelieferten
-Migrationen sind reines SQLite-DDL (`AUTOINCREMENT`, `CLOB` und Ähnliches) und laufen
-auf MariaDB/MySQL oder PostgreSQL nicht. Nötig sind ein eigener Migrationssatz bzw.
-eine Portierung des Schemas und ein Test der Abfragen auf der Zieldatenbank.
-`app:db:backup` funktioniert danach nicht mehr (es unterstützt nur SQLite); Backups
-laufen über die Werkzeuge der Datenbank.
+SQLite im WAL-Modus reicht für typische Unternehmenslasten. Ein Datenbankserver ist
+gleichwertig wählbar: `DB_CONNECTION=mariadb` (oder `mysql`) plus die `DB_*`-Werte in der
+`.env`, siehe *Datenbank wählen*. Die mitgelieferten Migrationen sind treiberneutral – ein
+Migrationslauf erzeugt das Schema auf der leeren Zieldatenbank. `app:db:backup` sichert
+SQLite wie MariaDB/MySQL, ohne dass die Werkzeuge der Datenbank von Hand bemüht werden
+müssen.
+
+PostgreSQL wird nicht unterstützt: `DB_CONNECTION` kennt nur `sqlite`, `mysql` und
+`mariadb`. Dafür bräuchte es einen eigenen Migrationssatz und einen Test der Abfragen auf
+der Zieldatenbank.

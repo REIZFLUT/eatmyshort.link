@@ -54,7 +54,7 @@ Modern by design — current versions, standard tooling, no moving parts to baby
 |---|---|
 | **Framework** | Symfony 8.1 — attributes instead of XML/YAML wiring, dependency injection throughout, `declare(strict_types=1)` in every file, typed properties and readonly where they belong |
 | **Runtime** | PHP 8.4 (8.5 works) with `intl`, `pdo_sqlite`, `sodium`, `mbstring`; `gd` for PNG QR codes and `apcu` are optional |
-| **Data** | Doctrine ORM and migrations on SQLite in WAL mode — no database server to install, patch or back up on the side |
+| **Data** | Doctrine ORM and migrations; SQLite in WAL mode by default — no database server to install, patch or back up on the side. MariaDB/MySQL is selectable via the `.env` (`DB_CONNECTION` plus the `DB_*` variables) |
 | **Frontend** | Twig plus Symfony AssetMapper: no Node, no bundler, no npm dependency tree |
 | **Quality gates** | PHPStan level 8, php-cs-fixer (`@Symfony`), 190+ tests covering HTTP, service and console paths, `composer audit` and SHA-pinned GitHub Actions in CI |
 | **Operations** | no queue, no Redis, no worker to monitor: housekeeping is a few cron lines (prune clicks and caches, refresh the GeoIP file), plus a deploy script with backup → maintenance mode → migrations → PHP-FPM reload → rollback, rotating log files and a `/healthz` endpoint |
@@ -119,7 +119,7 @@ php bin/console app:domain:add go.company.com --default
 | `app:domain:add <host> [--root=URL] [--default]` | Add a short-link domain |
 | `app:admin-ip [list\|allow\|remove\|clear] [cidr] [label]` | Manage the IP restriction for `/admin` (emergency access) |
 | `app:clicks:prune [--days=N]` | Delete old clicks (cron) |
-| `app:db:backup [target]` | Consistent copy of the SQLite database |
+| `app:db:backup [target]` | Consistent database backup: `VACUUM INTO` for SQLite, `mariadb-dump`/`mysqldump` for MySQL/MariaDB |
 | `app:plugin:list` | List whitelisted plugins and whether they are loaded |
 | `app:plugin:validate` | Check the plugin whitelist and every plugin directory (exit 1 on errors) |
 
