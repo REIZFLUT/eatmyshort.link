@@ -127,7 +127,26 @@ HTTP leitet auf HTTPS um.
 30 3 * * *  www-data  php /var/www/eatmyshort/bin/console app:db:backup --quiet && find /var/www/eatmyshort/var/backup -name '*.sqlite' -mtime +14 -delete
 # Abgelaufene Cache-Einträge entfernen (u. a. die Zähler des Tracking-Rate-Limiters)
 45 3 * * *  www-data  php /var/www/eatmyshort/bin/console cache:pool:prune --quiet
+# GeoIP-Datenbank monatlich erneuern (DB-IP Lite, CC BY 4.0). Erst laden, dann ersetzen:
+# scheitert der Download, bleibt die alte Datei liegen (kein leeres .mmdb).
+10 4 1 * *  www-data  cd /var/www/eatmyshort/var/geoip && curl -fsSL -o dbip-new.mmdb.gz "https://download.db-ip.com/free/dbip-country-lite-$(date +\%Y-\%m).mmdb.gz" && gunzip -f dbip-new.mmdb.gz && mv dbip-new.mmdb dbip-country-lite.mmdb && php /var/www/eatmyshort/bin/console cache:clear --env=prod --quiet
 ```
+
+### GeoIP-Datenbank (optional)
+
+Länder in der Statistik brauchen eine lokale `.mmdb`; es wird nie ein externer Dienst
+gefragt. Ohne Datei bleiben die Länder leer und *Admin → Einstellungen* zeigt einen Hinweis.
+
+```bash
+mkdir -p var/geoip
+curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-$(date +%Y-%m).mmdb.gz" \
+  | gunzip -c > var/geoip/dbip-country-lite.mmdb
+# GEOIP_DATABASE_PATH=/var/www/eatmyshort/var/geoip/dbip-country-lite.mmdb in .env.local
+```
+
+DB-IP Lite steht unter CC BY 4.0 und verlangt die Angabe „IP Geolocation by DB-IP";
+MaxMind GeoLite2 ist die Alternative (kostenloses Konto, Download per Lizenzschlüssel).
+Die Datei ist gut 8 MB (IPv4 + IPv6) und gehört nicht ins Repository (`var/` ist ignoriert).
 
 Der Tracking-Rate-Limiter legt pro aufrufender IP einen Zähler im Cache an. Die
 Einträge laufen nach einer Minute ab, die Dateien werden aber erst durch
