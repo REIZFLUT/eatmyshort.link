@@ -9,6 +9,7 @@ use App\Plugin\Ui\AdminWidget;
 use App\Tests\EventListener\AdminUiPluginListener;
 use App\Tests\EventListener\ApiPluginListener;
 use App\Tests\EventListener\LinkRejectionPluginListener;
+use Symfony\Component\DomCrawler\Crawler;
 
 /**
  * Plugin hooks on the admin UI: dashboard widgets and admin-navigation entries.
@@ -39,9 +40,7 @@ final class AdminUiPluginHooksTest extends AppTestCase
         $crawler = $this->client->request('GET', '/');
         self::assertResponseIsSuccessful();
 
-        $stat = $crawler->filter('section.stats .stat');
-        self::assertCount(1, $stat);
-        self::assertSame('Plugin Widget', $stat->filter('.label')->text());
+        $stat = self::widgetByLabel($crawler, 'Plugin Widget');
         self::assertSame('42', $stat->filter('.value')->text());
         self::assertStringContainsString('from a plugin', $stat->text());
         self::assertCount(0, $stat->filter('a'), 'no url set, so the card is not a link');
@@ -59,9 +58,8 @@ final class AdminUiPluginHooksTest extends AppTestCase
         $crawler = $this->client->request('GET', '/');
         self::assertResponseIsSuccessful();
 
-        $stat = $crawler->filter('section.stats a.stat');
+        $stat = $crawler->filter('section.stats a.stat[href="https://example.com/plugin"]');
         self::assertCount(1, $stat);
-        self::assertSame('https://example.com/plugin', $stat->attr('href'));
         self::assertSame('42', $stat->filter('.value')->text());
         self::assertSame('Plugin Widget', $stat->filter('.label')->text());
     }
@@ -84,5 +82,28 @@ final class AdminUiPluginHooksTest extends AppTestCase
         self::assertResponseIsSuccessful();
         self::assertCount(0, $crawler->filter('nav.nav a[href="/plugin/admin"]'));
         self::assertCount(0, $crawler->filter('nav.nav a[href="/admin/users"]'), 'the built-in admin points are hidden too - the gate is the same');
+    }
+
+    /**
+     * Addresses this test's own card by its label.
+     *
+     * The dashboard is not exclusively ours: the plugin test fixture under
+     * tests/Fixtures/plugins contributes a widget of its own, and a real installation will
+     * have more of them. Asserting "there is exactly one card" would make this test fail
+     * whenever somebody else adds one - which is precisely what a plugin system is for.
+     */
+    private static function widgetByLabel(Crawler $crawler, string $label): Crawler
+    {
+        $cards = $crawler->filter('section.stats .stat');
+        self::assertGreaterThan(0, $cards->count(), 'the plugin dashboard section was not rendered');
+
+        foreach ($cards as $index => $node) {
+            $card = $cards->eq($index);
+            if ($label === trim($card->filter('.label')->text())) {
+                return $card;
+            }
+        }
+
+        self::fail(sprintf('No plugin widget labelled "%s" was rendered.', $label));
     }
 }
