@@ -1,6 +1,11 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
+        # Optional platform pin, e.g. DB_SERVER_VERSION=mariadb-11.4.0. Only applies when
+        # the variable is set; unset (the default) it resolves to null and everything
+        # behaves as before - the version is then detected on connect, for SQLite and
+        # MariaDB/MySQL alike.
+        server_version: '%env(default::DB_SERVER_VERSION)%'
         profiling_collect_backtrace: '%kernel.debug%'
     orm:
         validate_xml_mapping: true

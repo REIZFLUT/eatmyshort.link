@@ -54,7 +54,7 @@ Modern von Anfang an – aktuelle Versionen, Standardwerkzeuge, keine bewegliche
 |---|---|
 | **Framework** | Symfony 8.1 – PHP-Attributes statt XML/YAML-Verdrahtung, Dependency Injection durchgehend, `declare(strict_types=1)` in jeder Datei, typisierte Properties und `readonly`, wo es hingehört |
 | **Laufzeit** | PHP 8.4 (8.5 funktioniert) mit `intl`, `pdo_sqlite`, `sodium`, `mbstring`; `gd` für PNG-QR-Codes und `apcu` sind optional |
-| **Daten** | Doctrine ORM und Migrationen auf SQLite im WAL-Modus – kein Datenbankserver, der zusätzlich installiert, gepatcht und gesichert werden muss |
+| **Daten** | Doctrine ORM und Migrationen; standardmäßig SQLite im WAL-Modus – kein Datenbankserver, der zusätzlich installiert, gepatcht und gesichert werden muss. MariaDB/MySQL ist über die `.env` wählbar (`DB_CONNECTION` plus die `DB_*`-Variablen) |
 | **Frontend** | Twig plus Symfony AssetMapper: kein Node, kein Bundler, kein npm-Abhängigkeitsbaum |
 | **Qualitätstore** | PHPStan Level 8, php-cs-fixer (`@Symfony`), 190+ Tests über HTTP-, Service- und Konsolenpfade, `composer audit` und per SHA gepinnte GitHub Actions im CI |
 | **Betrieb** | keine Queue, kein Redis, kein Worker zum Überwachen: Hausarbeit sind ein paar Cronzeilen (Klicks und Caches aufräumen, GeoIP-Datei erneuern) sowie ein Deploy-Skript mit Backup → Wartungsmodus → Migrationen → PHP-FPM-Reload → Rollback, rotierende Logdateien und ein `/healthz`-Endpunkt |
@@ -120,7 +120,7 @@ php bin/console app:domain:add go.firma.de --default
 | `app:domain:add <host> [--root=URL] [--default]` | Kurzdomain anlegen |
 | `app:admin-ip [list\|allow\|remove\|clear] [cidr] [label]` | IP-Sperre für `/admin` verwalten (Notfallzugang) |
 | `app:clicks:prune [--days=N]` | alte Klicks löschen (Cron) |
-| `app:db:backup [ziel]` | konsistente Kopie der SQLite-Datenbank |
+| `app:db:backup [ziel]` | konsistente Datenbanksicherung: `VACUUM INTO` für SQLite, `mariadb-dump`/`mysqldump` für MySQL/MariaDB |
 | `app:plugin:list` | freigeschaltete Plugins und ob sie geladen sind |
 | `app:plugin:validate` | Whitelist und alle Plugin-Verzeichnisse prüfen (Exit 1 bei Fehlern) |
 
