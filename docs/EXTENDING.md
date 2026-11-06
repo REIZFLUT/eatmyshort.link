@@ -204,8 +204,9 @@ Eigene Seiten liefert das Plugin selbst (Route + Zugriffsschutz, z. B. `#[IsGran
   weist unter anderem auf **weltweit schreibbare** Dateien und Verzeichnisse im Plugin hin
   (ein Plugin, das jeder Prozess ändern kann, ist eine Hintertür).
 - Secrets gehören nicht in `plugin.yaml` oder `settings` im Repository. Nutzen Sie
-  Umgebungsvariablen – der Kern lädt die `.env` außerhalb des Webroots; ein Plugin kann sie
-  über `%env(...)%` in seiner `services.yaml` verwenden.
+  Umgebungsvariablen: `%env(NAME)%` wird auch *innerhalb* der `settings` aufgelöst (geprüft –
+  die Signatur des Beispiel-Plugins wurde mit dem Wert aus der Umgebung berechnet), die
+  `.env` liegt außerhalb des Webroots.
 - Weiterleitungsziele aus Plugin-Hand landen in `Location`-Headern. Was ein Plugin dort
   einsetzt, muss es selbst validieren (der Kern prüft nur, was er selbst erzeugt).
 - Der Weiterleitungs- und Klickpfad ist auf Latenz optimiert; Plugins, die dort rechnen
@@ -217,9 +218,12 @@ Eigene Seiten liefert das Plugin selbst (Route + Zugriffsschutz, z. B. `#[IsGran
   Änderungen an Whitelist, Services oder Routen `cache:clear` (bzw. ein Deploy) ausführen.
 - Klassender Autoloading läuft bei jedem Boot; ein neues Plugin braucht keinen
   Composer-Lauf.
-- `app:plugin:validate` gehört ins Deployment (CI/Deploy-Skript): es findet
-  Tippfehler in Namen, unerfüllte API-Anforderungen und Rechteprobleme, bevor sie im
-  Betrieb auffallen. Es beendet sich mit Exit-Code 1 bei Fehlern, 0 bei Warnungen.
+- `app:plugin:validate` gehört ins Deployment (CI und `bin/deploy.sh`, das es vor dem
+  PHP-FPM-Reload ausführt): es findet Tippfehler in Namen, unerfüllte API-Anforderungen und
+  Rechteprobleme, bevor sie im Betrieb auffallen. Der Befehl meldet Fehler mit **Exit-Code 1**
+  und Warnungen mit Exit 0. Ein *fundamental* kaputtes Plugin (aktiviert, aber ohne
+  Verzeichnis) lässt schon den Boot scheitern – dann bricht auch der Befehl ab, ebenfalls mit
+  Exit 1; das ist die Fail-closed-Regel von oben.
 
 ## Werkzeuge
 

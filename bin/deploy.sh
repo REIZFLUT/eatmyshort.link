@@ -321,13 +321,19 @@ run php bin/console cache:clear --env=prod
 run php bin/console cache:warmup --env=prod
 
 # ---------------------------------------------------------------------------
-# 8) PHP-FPM neu laden (sonst laeuft der alte OPcache-Inhalt weiter)
+# 8) Plugins pruefen (Whitelist, plugin.yaml, requires.api, Rechte)
+# ---------------------------------------------------------------------------
+log 'Plugins pruefen'
+run php bin/console app:plugin:validate --env=prod
+
+# ---------------------------------------------------------------------------
+# 9) PHP-FPM neu laden (sonst laeuft der alte OPcache-Inhalt weiter)
 # ---------------------------------------------------------------------------
 log 'PHP-FPM neu laden'
 reload_fpm
 
 # ---------------------------------------------------------------------------
-# 9) Wartungsmodus beenden
+# 10) Wartungsmodus beenden
 # ---------------------------------------------------------------------------
 log 'Wartungsmodus beenden'
 if ((DRY_RUN)); then
