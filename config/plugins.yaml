@@ -1,0 +1,29 @@
+# Plugin whitelist.
+#
+# Only the plugins listed below are loaded. A directory under plugins/ that is not named
+# here is ignored completely: its classes are not autoloaded, its services are not
+# registered and its routes are not imported. "app:plugin:validate" reports such a
+# directory as a warning.
+#
+# Trust: a plugin is NOT sandboxed. Once enabled it is imported into the container and the
+# router exactly like the application's own code and runs with the same rights (database,
+# filesystem, network, secrets). Review a plugin before you enable it.
+#
+# Format:
+#   plugins:
+#       <name>:
+#           enabled: true     # required; <name> must be the plugins/<name>/ directory name,
+#                             # [a-z0-9-], 3-40 characters
+#           settings: {}      # optional, free-form and plugin-defined; read through the plugin API
+#
+# A "when@<env>:" section has the same shape and is merged over the entries above for that
+# environment, so one environment can enable or disable a plugin or override single
+# settings without touching the shared list.
+plugins: {}
+
+# when@dev:
+#     plugins:
+#         example-utm:
+#             enabled: true
+#             settings:
+#                 campaign: newsletter

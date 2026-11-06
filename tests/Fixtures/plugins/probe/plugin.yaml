@@ -1,0 +1,5 @@
+name: probe
+version: 2.1.0
+description: Test fixture that proves a plugin is autoloaded, wired into the container and its routes and listeners are registered.
+requires:
+    api: '>=1.0'

@@ -1,0 +1,4 @@
+probe_plugin:
+    path: /__probe/plugin
+    controller: Plugin\Probe\ProbeController::index
+    methods: [GET]

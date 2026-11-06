@@ -1,0 +1,3 @@
+name: unlisted
+version: 1.0.0
+description: Test fixture directory that is deliberately absent from the whitelist, so the validator reports it as a warning and the app ignores it.
