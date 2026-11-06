@@ -61,6 +61,13 @@ class Kernel extends BaseKernel
         }
 
         foreach ($this->pluginRegistry()->active($this->environment) as $plugin) {
+            // The operator's settings for a plugin are free-form and only known at build
+            // time, so they become a container parameter the plugin can inject from its own
+            // services.yaml as '%app.plugins.<name>.settings%'. Set before importing the
+            // plugin's services, which may reference it. The parameter name is the contract
+            // (documented in plugins/README.md) - a plugin must be able to rely on it.
+            $container->parameters()->set('app.plugins.'.$plugin->name.'.settings', $plugin->settings);
+
             $services = $plugin->directory.'/services.yaml';
             if (is_file($services)) {
                 $container->import($services);

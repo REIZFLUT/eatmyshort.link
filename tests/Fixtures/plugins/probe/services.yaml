@@ -2,6 +2,15 @@ services:
     _defaults:
         autowire: true
         autoconfigure: true
+        bind:
+            # The settings-parameter contract: the kernel exposes the whitelist's settings
+            # for this plugin as app.plugins.probe.settings, so any service here with a
+            # $settings argument is autowired from it.
+            $settings: '%app.plugins.probe.settings%'
 
     Plugin\Probe\:
         resource: 'src/'
+
+    # Public so the test can fetch it and assert the contract end to end.
+    Plugin\Probe\ProbeSettings:
+        public: true

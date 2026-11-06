@@ -29,6 +29,25 @@ foreach ($testEnv as $name => $value) {
 
 require $projectDir.'/vendor/autoload.php';
 
+// The example plugins under plugins/ are not part of the test whitelist (APP_PLUGIN_DIR
+// points at tests/Fixtures/plugins), so the kernel does not register their namespaces while
+// the suite runs. The tests still exercise those classes directly - and register the UTM
+// listener as a test service - so teach the autoloader where to find them here. Classes are
+// loaded on demand only; nothing is loaded through the whitelist.
+foreach ([
+    'Plugin\\UtmTagging\\' => $projectDir.'/plugins/utm-tagging/src',
+    'Plugin\\ClickWebhook\\' => $projectDir.'/plugins/click-webhook/src',
+] as $prefix => $path) {
+    spl_autoload_register(static function (string $class) use ($prefix, $path): void {
+        if ($prefix === substr($class, 0, \strlen($prefix))) {
+            $file = $path.'/'.str_replace('\\', '/', substr($class, \strlen($prefix))).'.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        }
+    });
+}
+
 // Fresh SQLite test database built from the real migrations (DAMA rolls back every test).
 if ('test' === $_SERVER['APP_ENV']) {
     $database = $projectDir.'/var/data/test.sqlite';

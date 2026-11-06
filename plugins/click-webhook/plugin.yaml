@@ -1,0 +1,5 @@
+name: click-webhook
+version: 1.0.0
+description: Reports every recorded click as a signed JSON webhook to an M2M endpoint.
+requires:
+    api: '>=1.0'

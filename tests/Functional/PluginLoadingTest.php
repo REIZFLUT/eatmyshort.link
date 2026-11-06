@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use App\Event\Admin\DashboardWidgetsEvent;
 use Plugin\Off\OffController;
 use Plugin\Probe\ProbeRecorder;
+use Plugin\Probe\ProbeSettings;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Routing\RouterInterface;
 
@@ -52,5 +53,30 @@ final class PluginLoadingTest extends AppTestCase
         self::assertInstanceOf(RouterInterface::class, $router);
         self::assertNull($router->getRouteCollection()->get('off_plugin'));
         self::assertNotNull($router->getRouteCollection()->get('probe_plugin'));
+    }
+
+    /**
+     * The settings written in the whitelist reach the container as the parameter
+     * app.plugins.<name>.settings - the contract a plugin injects from its own services.yaml.
+     */
+    public function testPluginSettingsReachTheContainerAsAParameter(): void
+    {
+        self::assertSame(
+            ['greeting' => 'hello'],
+            static::getContainer()->getParameter('app.plugins.probe.settings'),
+        );
+    }
+
+    /**
+     * ...and a plugin service can actually consume it: the fixture service is autowired from
+     * the plugin's services.yaml with '%app.plugins.probe.settings%'.
+     */
+    public function testPluginServiceCanInjectItsOwnSettings(): void
+    {
+        // @phpstan-ignore symfonyContainer.serviceNotFound (the plugin only exists in the test container)
+        $settings = static::getContainer()->get(ProbeSettings::class);
+
+        self::assertInstanceOf(ProbeSettings::class, $settings);
+        self::assertSame(['greeting' => 'hello'], $settings->settings);
     }
 }
