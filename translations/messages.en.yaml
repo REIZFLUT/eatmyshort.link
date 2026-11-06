@@ -11,6 +11,7 @@ action.save: Save
 action.search: Search
 
 nav.main: Main navigation
+footer.source: Source code on GitHub
 nav.dashboard: Overview
 nav.links: Links
 nav.tools: Tools

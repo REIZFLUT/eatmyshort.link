@@ -11,6 +11,21 @@ use OTPHP\TOTP;
  */
 final class PagesTest extends AppTestCase
 {
+    public function testFooterLinksToTheRepositoryInsteadOfRepeatingTheName(): void
+    {
+        $this->client->loginUser($this->createUser('footer@example.com'));
+
+        $crawler = $this->client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+
+        $footer = $crawler->filter('footer.site');
+        self::assertSame(1, $footer->filter('a[href="https://github.com/REIZFLUT/eatmyshort.link"]')->count());
+        self::assertSame('noopener noreferrer', $footer->filter('a')->attr('rel'));
+        self::assertStringContainsString('GPL-3.0', $footer->text());
+        // The product name is rendered once (as the configured title), not twice.
+        self::assertSame(1, substr_count($footer->text(), 'EatMyShort.Link'));
+    }
+
     public function testAllPagesRender(): void
     {
         $admin = $this->createUser('root@example.com', admin: true);
