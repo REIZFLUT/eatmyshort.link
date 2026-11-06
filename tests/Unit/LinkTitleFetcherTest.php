@@ -23,6 +23,13 @@ final class LinkTitleFetcherTest extends TestCase
         yield 'link local metadata' => ['http://169.254.169.254/latest/meta-data'];
         yield 'private class a' => ['http://10.0.0.5/'];
         yield 'localhost name' => ['http://localhost/'];
+        yield 'unspecified address' => ['http://0.0.0.0/'];
+        yield 'carrier-grade nat' => ['http://100.64.1.1/'];
+        yield 'benchmarking range' => ['http://198.18.0.1/'];
+        yield 'nat64 to loopback' => ['http://[64:ff9b::7f00:1]/'];
+        yield '6to4 to loopback' => ['http://[2002:7f00:1::]/'];
+        yield 'ipv4 mapped loopback' => ['http://[::ffff:127.0.0.1]/'];
+        yield 'decimal loopback' => ['http://2130706433/'];
         yield 'non http scheme' => ['file:///etc/passwd'];
     }
 
@@ -105,10 +112,14 @@ final class LinkTitleFetcherTest extends TestCase
         self::assertNull($fetcher->fetch('http://93.184.216.34/seite'));
     }
 
+    // MockResponse does not compute "redirect_url" from the Location header like the real
+    // clients do, so the redirect responses below carry it explicitly.
+
     public function testRedirectIntoAPrivateAddressIsNotFollowed(): void
     {
         $client = new MockHttpClient(new MockResponse('', [
             'http_code' => 302,
+            'redirect_url' => 'http://127.0.0.1/latest/meta-data',
             'response_headers' => ['location' => 'http://127.0.0.1/latest/meta-data'],
         ]));
         $fetcher = new LinkTitleFetcher($client, new NullLogger());
@@ -117,10 +128,24 @@ final class LinkTitleFetcherTest extends TestCase
         self::assertSame(1, $client->getRequestsCount(), 'the redirect target must not be requested at all');
     }
 
-    public function testRelativeRedirectIsFollowedAndResolved(): void
+    public function testRedirectHopsAreLimited(): void
+    {
+        $hop = static fn (int $i): MockResponse => new MockResponse('', [
+            'http_code' => 302,
+            'redirect_url' => 'http://93.184.216.34/hop'.$i,
+            'response_headers' => ['location' => '/hop'.$i],
+        ]);
+        $client = new MockHttpClient([$hop(1), $hop(2), $hop(3), $hop(4)]);
+        $fetcher = new LinkTitleFetcher($client, new NullLogger());
+
+        self::assertNull($fetcher->fetch('http://93.184.216.34/start'));
+        self::assertSame(3, $client->getRequestsCount(), 'the start page plus two redirects, then it gives up');
+    }
+
+    public function testRedirectToAPublicAddressIsFollowed(): void
     {
         $responses = [
-            new MockResponse('', ['http_code' => 302, 'response_headers' => ['location' => '/landing']]),
+            new MockResponse('', ['http_code' => 302, 'redirect_url' => 'http://93.184.216.34/landing', 'response_headers' => ['location' => '/landing']]),
             new MockResponse('<html><head><title>Zielseite</title></head></html>', [
                 'response_headers' => ['content-type' => 'text/html; charset=utf-8'],
             ]),

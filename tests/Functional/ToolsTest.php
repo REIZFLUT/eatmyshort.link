@@ -95,6 +95,7 @@ final class ToolsTest extends AppTestCase
 
         $links = $this->em()->getRepository(Link::class)->findBy(['targetUrl' => 'https://www.example.com/x']);
         self::assertCount(1, $links, 'exactly one link is created');
+        self::assertSame('Hallo', $links[0]->getTitle(), 'the title sent by the bookmarklet is kept, not fetched again');
         $shortUrl = $links[0]->getShortUrl();
 
         $this->client->followRedirect();

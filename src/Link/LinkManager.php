@@ -13,26 +13,15 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 /**
  * Shared create/update logic for the web UI and the API.
  */
-final class LinkManager
+final readonly class LinkManager
 {
-    /**
-     * Links whose title was already handled in this request. A WeakMap keeps the marker
-     * tied to the entity instance without pinning it in memory; prepare() runs twice per
-     * create (form POST_SUBMIT and validate()), and the second call must not hit the
-     * network again.
-     *
-     * @var \WeakMap<Link, bool>
-     */
-    private \WeakMap $titleFetched;
-
     public function __construct(
-        private readonly EntityManagerInterface $em,
-        private readonly ValidatorInterface $validator,
-        private readonly ShortCodeGenerator $codes,
-        private readonly Settings $settings,
-        private readonly LinkTitleFetcher $titleFetcher,
+        private EntityManagerInterface $em,
+        private ValidatorInterface $validator,
+        private ShortCodeGenerator $codes,
+        private Settings $settings,
+        private LinkTitleFetcher $titleFetcher,
     ) {
-        $this->titleFetched = new \WeakMap();
     }
 
     public function applyDefaults(Link $link): void
@@ -48,7 +37,6 @@ final class LinkManager
         if ('' === $link->getCode() && null !== $link->getDomain()) {
             $link->setCode($this->codes->generate($link->getDomain()));
         }
-        $this->fetchTitle($link);
     }
 
     public function validate(Link $link): ConstraintViolationListInterface
@@ -58,8 +46,17 @@ final class LinkManager
         return $this->validator->validate($link);
     }
 
-    public function save(Link $link): void
+    /**
+     * Persists the link. Callers validate first, so the title of a new link is fetched only
+     * for targets that passed validation (a rejected target, e.g. a loop to one of our own
+     * hosts, is never requested). Bulk work such as the CSV import passes $fetchTitle = false:
+     * one blocking request per row would run into the PHP time limit.
+     */
+    public function save(Link $link, bool $fetchTitle = true): void
     {
+        if ($fetchTitle && null === $link->getId()) {
+            $this->fetchTitle($link);
+        }
         $link->touch();
         if (null === $link->getId()) {
             $this->em->persist($link);
@@ -75,14 +72,11 @@ final class LinkManager
 
     /**
      * Pulls the page title from the target when enabled – YOURLS-style – but only for a
-     * blank title and an http(s) target, and never more than once per request. Any error
-     * inside the fetcher stays contained: a failing fetch must not block link creation.
+     * blank title and an http(s) target. Any error inside the fetcher stays contained: a
+     * failing fetch must not block link creation.
      */
     private function fetchTitle(Link $link): void
     {
-        if (isset($this->titleFetched[$link])) {
-            return;
-        }
         if (!$this->settings->getBool(Settings::LINK_FETCH_TITLE)) {
             return;
         }
@@ -95,7 +89,6 @@ final class LinkManager
             return;
         }
 
-        $this->titleFetched[$link] = true;
         try {
             $fetched = $this->titleFetcher->fetch($target);
         } catch (\Throwable) {

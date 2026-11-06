@@ -168,6 +168,8 @@ final class LinkController extends AbstractController
         if (null !== $url) {
             $link->setTargetUrl($url);
         }
+        // The bookmarklet already knows the page title; only a link without one is looked up.
+        $link->setTitle(self::plausibleTitle($request->request->get('title')));
         if ('' !== $code) {
             $link->setCode($code);
         }

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 /**
- * bin/deploy.sh flips var/maintenance around the update; the app has to answer with 503
- * instead of serving old code against a half-migrated database.
+ * bin/deploy.sh flips var/maintenance around the update; the admin hosts answer with 503
+ * instead of serving old code against a half-migrated database, short links stay up.
  */
 final class MaintenanceTest extends AppTestCase
 {
@@ -27,7 +27,7 @@ final class MaintenanceTest extends AppTestCase
         parent::tearDown();
     }
 
-    public function testMaintenanceFlagBlocksEveryRoute(): void
+    public function testMaintenanceFlagBlocksEveryAdminRoute(): void
     {
         touch($this->flag);
 
@@ -43,5 +43,16 @@ final class MaintenanceTest extends AppTestCase
         unlink($this->flag);
         $this->client->request('GET', '/login');
         self::assertResponseIsSuccessful();
+    }
+
+    public function testShortLinksKeepRedirectingDuringMaintenance(): void
+    {
+        $user = $this->createUser('user@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $this->createLink($user, $domain, 'messe', 'https://www.example.com/messe');
+        touch($this->flag);
+
+        $this->shortRequest('go.example.com', '/messe');
+        self::assertResponseRedirects('https://www.example.com/messe', 302);
     }
 }

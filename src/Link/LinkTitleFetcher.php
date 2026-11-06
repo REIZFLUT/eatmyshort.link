@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Link;
 
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -14,8 +15,13 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  *
  * The fetcher never throws: DNS problems, SSRF rejections, timeouts, HTTP errors, wrong
  * content types and broken HTML all result in null so that link creation continues
- * undisturbed. Every request is guarded against SSRF *before* the connection: only
- * http/https to a host that resolves to strictly public addresses is allowed.
+ * undisturbed.
+ *
+ * SSRF protection comes from Symfony's NoPrivateNetworkHttpClient: it resolves the host
+ * itself, rejects every address in IpUtils::PRIVATE_SUBNETS (loopback, RFC 1918, CGNAT,
+ * link local, NAT64, 6to4, ...), pins the checked address for the connection so DNS
+ * rebinding cannot swap in another one, and repeats the check for every redirect hop
+ * before that hop is requested.
  */
 final class LinkTitleFetcher
 {
@@ -23,61 +29,36 @@ final class LinkTitleFetcher
     private const int MAX_TITLE_LENGTH = 255;
     private const int MAX_REDIRECTS = 2;
 
+    private readonly HttpClientInterface $client;
+
     public function __construct(
-        private readonly HttpClientInterface $client,
+        HttpClientInterface $client,
         private readonly LoggerInterface $logger,
     ) {
+        $this->client = new NoPrivateNetworkHttpClient($client);
     }
 
     public function fetch(string $url): ?string
     {
-        try {
-            $current = $url;
-            // Redirects are followed manually: the HTTP client would otherwise follow a
-            // Location into a private address without asking this guard again.
-            for ($hop = 0; $hop <= self::MAX_REDIRECTS; ++$hop) {
-                if (!$this->isSafeTarget($current)) {
-                    return null;
-                }
-
-                $response = $this->client->request('GET', $current, [
-                    'timeout' => 3,
-                    'max_duration' => 5,
-                    'max_redirects' => 0,
-                    'headers' => [
-                        'User-Agent' => 'EatMyShort.Link Titelabruf',
-                        'Accept' => 'text/html',
-                    ],
-                ]);
-
-                $status = $response->getStatusCode();
-                if (\in_array($status, [301, 302, 303, 307, 308], true)) {
-                    $location = $response->getHeaders(false)['location'][0] ?? null;
-                    $response->cancel();
-                    if (!\is_string($location) || '' === $location) {
-                        return null;
-                    }
-                    $next = $this->absoluteLocation($current, $location);
-                    if (null === $next) {
-                        return null;
-                    }
-                    $current = $next;
-                    continue;
-                }
-
-                // Defence in depth against DNS rebinding: check the address we are really
-                // connected to, not only the one that was resolved before the request.
-                $primaryIp = $response->getInfo('primary_ip');
-                if (\is_string($primaryIp) && '' !== $primaryIp && !$this->isPublicIp($primaryIp)) {
-                    $response->cancel();
-
-                    return null;
-                }
-
-                return $this->titleFromResponse($response);
-            }
-
+        $scheme = mb_strtolower((string) parse_url($url, \PHP_URL_SCHEME));
+        if (!\in_array($scheme, ['http', 'https'], true)) {
             return null;
+        }
+
+        try {
+            // Worst case (two redirects, each hop at the duration limit) stays below ten
+            // seconds; creating a link waits for this.
+            $response = $this->client->request('GET', $url, [
+                'timeout' => 2,
+                'max_duration' => 3,
+                'max_redirects' => self::MAX_REDIRECTS,
+                'headers' => [
+                    'User-Agent' => 'EatMyShort.Link Titelabruf',
+                    'Accept' => 'text/html',
+                ],
+            ]);
+
+            return $this->titleFromResponse($response);
         } catch (\Throwable $e) {
             $this->logger->debug('Titelabruf für "{url}" fehlgeschlagen: {message}', ['url' => $url, 'message' => $e->getMessage()]);
 
@@ -85,7 +66,7 @@ final class LinkTitleFetcher
         }
     }
 
-    /** Reads and validates one (non-redirect) response. */
+    /** Reads and validates the final response (redirects were followed by the client). */
     private function titleFromResponse(ResponseInterface $response): ?string
     {
         $status = $response->getStatusCode();
@@ -103,83 +84,6 @@ final class LinkTitleFetcher
         }
 
         return $this->extractTitle($this->readLimited($response));
-    }
-
-    /** Turns a Location header into an absolute URL, or null when it is not http(s). */
-    private function absoluteLocation(string $base, string $location): ?string
-    {
-        $location = trim($location);
-        if (preg_match('#^https?://#i', $location)) {
-            return $location;
-        }
-        $parts = parse_url($base);
-        if (!\is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
-            return null;
-        }
-        $scheme = (string) $parts['scheme'];
-        $authority = $scheme.'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
-
-        if (str_starts_with($location, '//')) {
-            return $scheme.':'.$location;
-        }
-        if (str_starts_with($location, '/')) {
-            return $authority.$location;
-        }
-
-        $path = (string) ($parts['path'] ?? '/');
-        $directory = rtrim(substr($path, 0, (int) strrpos($path, '/') + 1), '/');
-
-        return $authority.'/'.ltrim(ltrim($directory, '/').'/'.$location, '/');
-    }
-
-    /**
-     * SSRF guard: only http/https, the host must be present and must not resolve to a
-     * private or reserved address. A literal IP is validated directly; a hostname is
-     * resolved and every returned address is checked. A host that does not resolve is
-     * rejected.
-     */
-    private function isSafeTarget(string $url): bool
-    {
-        $parts = parse_url($url);
-        if (!\is_array($parts)) {
-            return false;
-        }
-        $scheme = mb_strtolower((string) ($parts['scheme'] ?? ''));
-        if (!\in_array($scheme, ['http', 'https'], true)) {
-            return false;
-        }
-        $host = trim((string) ($parts['host'] ?? ''), '[]');
-        if ('' === $host) {
-            return false;
-        }
-
-        if (false !== filter_var($host, \FILTER_VALIDATE_IP)) {
-            return $this->isPublicIp($host);
-        }
-
-        // gethostbynamel() is IPv4 only; a host with a public A record and a private AAAA
-        // record would otherwise slip through.
-        $addresses = gethostbynamel($host) ?: [];
-        foreach (dns_get_record($host, \DNS_AAAA) ?: [] as $record) {
-            if (\is_string($record['ipv6'] ?? null)) {
-                $addresses[] = $record['ipv6'];
-            }
-        }
-        if ([] === $addresses) {
-            return false;
-        }
-        foreach ($addresses as $address) {
-            if (!$this->isPublicIp($address)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private function isPublicIp(string $ip): bool
-    {
-        return false !== filter_var($ip, \FILTER_VALIDATE_IP, \FILTER_FLAG_NO_PRIV_RANGE | \FILTER_FLAG_NO_RES_RANGE);
     }
 
     /** Reads at most MAX_BYTES of the body and aborts the transfer once the limit is hit. */

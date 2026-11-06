@@ -47,7 +47,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * This class has no request dependency. preview() only parses and validates and
  * never writes; import() persists each accepted row through LinkManager and frees
  * memory with flush()+clear() every 200 rows, reloading the domain and owner
- * afterwards (clear() detaches them).
+ * afterwards (clear() detaches them). Page titles are not fetched for imported rows:
+ * a blocking request per row would make a large file exceed the PHP time limit.
  */
 final readonly class CsvLinkImporter
 {
@@ -209,7 +210,8 @@ final readonly class CsvLinkImporter
 
             ++$valid;
             if ($persist) {
-                $this->manager->save($link);
+                // No title lookup here: one blocking request per row would exceed the time limit.
+                $this->manager->save($link, fetchTitle: false);
                 ++$created;
                 $seen[($domain->getId() ?? 0).'|'.$link->getCode()] = true;
             }

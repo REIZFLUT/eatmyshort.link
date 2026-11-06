@@ -60,6 +60,22 @@ final class ImportTest extends AppTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testImportDoesNotFetchPageTitles(): void
+    {
+        $admin = $this->createUser('root@example.com', admin: true);
+        $domain = $this->createDomain('go.example.com', $admin);
+        $this->client->loginUser($admin);
+
+        // Title lookup is on by default and the mocked HTTP client would answer with
+        // MockResponseFactory::TITLE: an imported row must keep its empty title.
+        $this->post($this->params($admin, $domain, 'import'), "code,target_url\nohne,https://93.184.216.34/a\n");
+        self::assertResponseIsSuccessful();
+
+        $link = $this->em()->getRepository(Link::class)->findOneBy(['code' => 'ohne']);
+        self::assertNotNull($link);
+        self::assertNull($link->getTitle());
+    }
+
     public function testPreviewCountsRowsAndWritesNothing(): void
     {
         $admin = $this->createUser('root@example.com', admin: true);

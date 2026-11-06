@@ -166,7 +166,8 @@ bin/deploy.sh
 ```
 
 Das Skript prüft die Voraussetzungen, schreibt ein Datenbank-Backup
-(`SKIP_BACKUP=1` überspringt es), aktiviert den Wartungsmodus (`var/maintenance`),
+(`SKIP_BACKUP=1` überspringt es), aktiviert den Wartungsmodus (`var/maintenance`: der
+Admin-Host antwortet mit 503, Kurzlinks leiten weiter),
 holt den neuen Stand (`git pull --ff-only`), installiert die Abhängigkeiten ohne
 Dev-Pakete, führt Migrationen aus, kompiliert die Assets, leert und wärmt den
 Prod-Cache, lädt PHP-FPM neu und prüft danach `GET /healthz`. Schlägt ein Schritt
@@ -205,15 +206,19 @@ beim In-Place-Layout, weil das Hosting so eingerichtet ist.
 - **`/healthz`** ist ohne Login erreichbar und meldet nur `{"status":"ok"}` bzw. bei
   Datenbankfehlern `{"status":"error"}` mit HTTP 503 – ohne interne Details.
 - **Titelabruf**: Beim Anlegen holt der Server den Seitentitel des Ziels ab (abschaltbar unter
-  *Admin → Einstellungen*). Der Abruf ist auf 3 s, zwei Weiterleitungen und 256 KB begrenzt und
-  ruft niemals private, Loopback- oder Link-Local-Adressen auf (SSRF-Schutz: DNS-Auflösung wird
-  gegen `FILTER_FLAG_NO_PRIV_RANGE|FILTER_FLAG_NO_RES_RANGE` geprüft). Benötigt ausgehendes
+  *Admin → Einstellungen*), erst nachdem der Link die Prüfung bestanden hat und nie beim
+  CSV-Import. Der Abruf ist auf 3 s je Schritt, zwei Weiterleitungen und 256 KB begrenzt und
+  ruft niemals private, Loopback-, Link-Local-, CGNAT- oder NAT64-Adressen auf (SSRF-Schutz
+  über Symfonys `NoPrivateNetworkHttpClient`: die geprüfte Adresse wird für die Verbindung
+  festgehalten, jede Weiterleitung wird vor dem Abruf erneut geprüft). Benötigt ausgehendes
   HTTP/HTTPS; in Netzen ohne Ausgang bleibt der Titel einfach leer.
 - **CSV-Import**: *Admin → Import*. Kopfzeile ist Pflicht; erkannt werden `code`/`keyword`,
   `target_url`/`url`, `title`, `domain`, `redirect_type`, `active`, `expires_at` (`clicks` wird
   ignoriert, damit YOURLS-Exporte direkt passen). Grenzen: 5 MB, 5000 Zeilen pro Lauf,
   UTF-8 (BOM und Semikolon sind ok). Der erste Schritt zeigt nur eine Vorschau, geschrieben wird
   erst nach der Bestätigung; vorhandene Kürzel auf der Zieldomain werden übersprungen.
+  Seitentitel werden beim Import nicht abgerufen (ein Abruf je Zeile würde das Zeitlimit
+  sprengen); fehlende Titel bleiben leer.
 
 ## Leistung
 
