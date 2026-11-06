@@ -70,3 +70,16 @@ Two working examples live in this directory, both disabled by default:
 | `click-webhook` | reports recorded clicks as a signed JSON webhook | `url`, `timeout`, `secret`, `headers` |
 
 Each ships its own `README.md` with its purpose, its settings and how to enable it.
+
+## Adding your own
+
+Copy `utm-tagging/` as a starting point (or start from an empty directory) and follow the
+"Extensions" chapter in [`docs/EXTENDING.md`](../docs/EXTENDING.md). Two practical notes:
+
+- A plugin directory is ordinary source code. Whether it belongs in this repository or in its
+  own is your call: keeping it here versions it together with the app (simple, one deploy),
+  keeping it out means you add it to `.gitignore` and copy it onto the server yourself.
+- The plugin list, its services and its routes are read while the container is compiled. After
+  adding a plugin, changing its whitelist entry or editing its `services.yaml`, run
+  `php bin/console cache:clear --env=<env>` - and `php bin/console app:plugin:validate` before
+  you trust it.
