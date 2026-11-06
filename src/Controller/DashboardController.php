@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\Link;
 use App\Entity\User;
+use App\Event\Admin\DashboardWidgetsEvent;
 use App\Form\LinkType;
 use App\Link\LinkManager;
 use App\Repository\DomainRepository;
@@ -17,6 +18,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final class DashboardController extends AbstractController
 {
@@ -28,6 +30,7 @@ final class DashboardController extends AbstractController
         LinkManager $manager,
         StatsBuilder $stats,
         AdminAccess $adminAccess,
+        EventDispatcherInterface $dispatcher,
     ): Response {
         $usable = $domains->findUsableBy($user, $adminAccess->isAdmin($user));
         $link = new Link($user);
@@ -41,11 +44,16 @@ final class DashboardController extends AbstractController
             'action' => $this->generateUrl('app_link_new'),
         ]);
 
+        // Plugins may append their own cards after the built-in ones.
+        $widgets = new DashboardWidgetsEvent();
+        $dispatcher->dispatch($widgets);
+
         return $this->render('dashboard/index.html.twig', [
             'quick_form' => $quickForm,
             'recent' => $links->findRecentFor($user, 8),
             'link_count' => $links->countFor($user),
             'stats' => $stats->build(Period::lastDays(30), owner: $user),
+            'widgets' => $widgets->all(),
         ]);
     }
 }

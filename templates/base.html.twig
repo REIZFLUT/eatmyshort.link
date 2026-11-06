@@ -35,6 +35,10 @@
                     <a href="{{ path('app_admin_ip_rules') }}" class="{{ route starts with 'app_admin_ip' ? 'active' }}">{{ 'nav.ip_rules'|trans }}</a>
                     <a href="{{ path('app_admin_import') }}" class="{{ route starts with 'app_admin_import' ? 'active' }}">{{ 'nav.import'|trans }}</a>
                     <a href="{{ path('app_admin_settings') }}" class="{{ route == 'app_admin_settings' ? 'active' }}">{{ 'nav.settings'|trans }}</a>
+                    {# Plugin entries append after the built-in admin points; each plugin ships its own route and access control. #}
+                    {% for item in plugin_admin_nav() %}
+                        <a href="{{ item.url }}">{{ item.label }}</a>
+                    {% endfor %}
                 {% endif %}
             </nav>
             <div class="usermenu">

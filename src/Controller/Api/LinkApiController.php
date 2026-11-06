@@ -8,7 +8,9 @@ use App\Entity\Domain;
 use App\Entity\Link;
 use App\Entity\LinkLocalisation;
 use App\Entity\User;
+use App\Event\Api\ApiResponseEvent;
 use App\Link\LinkManager;
+use App\Link\LinkRejectedException;
 use App\Repository\ClickRepository;
 use App\Repository\DomainRepository;
 use App\Repository\LinkRepository;
@@ -32,6 +34,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * REST API v1, authenticated with personal access tokens ("Authorization: Bearer emsl_…").
@@ -48,15 +51,16 @@ final class LinkApiController extends AbstractController
         #[Autowire(service: 'limiter.api')]
         private readonly RateLimiterFactoryInterface $apiLimiter,
         private readonly AdminAccess $adminAccess,
+        private readonly EventDispatcherInterface $dispatcher,
     ) {
     }
 
     #[Route('/domains', name: 'api_domains', methods: ['GET'])]
-    public function domains(#[CurrentUser] User $user): JsonResponse
+    public function domains(Request $request, #[CurrentUser] User $user): JsonResponse
     {
         $this->throttle($user);
 
-        return $this->json(['data' => array_map(static fn (Domain $d): array => [
+        return $this->ok('domains.list', $request, ['data' => array_map(static fn (Domain $d): array => [
             'id' => $d->getId(),
             'hostname' => $d->getHostname(),
             'default' => $d->isDefault(),
@@ -74,7 +78,7 @@ final class LinkApiController extends AbstractController
             ->setMaxResults(self::PER_PAGE);
         $paginator = new Paginator($query, fetchJoinCollection: false);
 
-        return $this->json([
+        return $this->ok('links.list', $request, [
             'data' => array_map(self::normalize(...), iterator_to_array($paginator, false)),
             'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => \count($paginator)],
         ]);
@@ -99,18 +103,22 @@ final class LinkApiController extends AbstractController
         if (\count($violations) > 0) {
             return $this->violations($violations);
         }
-        $this->manager->save($link);
+        try {
+            $this->manager->save($link);
+        } catch (LinkRejectedException $exception) {
+            return $this->rejected($exception);
+        }
 
-        return $this->json(['data' => self::normalize($link)], Response::HTTP_CREATED);
+        return $this->ok('links.create', $request, ['data' => self::normalize($link)], Response::HTTP_CREATED);
     }
 
     #[Route('/links/{id}', name: 'api_link_show', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     #[IsGranted(LinkVoter::MANAGE, 'link')]
-    public function show(Link $link, #[CurrentUser] User $user): JsonResponse
+    public function show(Request $request, Link $link, #[CurrentUser] User $user): JsonResponse
     {
         $this->throttle($user);
 
-        return $this->json(['data' => self::normalize($link)]);
+        return $this->ok('links.show', $request, ['data' => self::normalize($link)]);
     }
 
     #[Route('/links/{id}', name: 'api_link_update', requirements: ['id' => Requirement::DIGITS], methods: ['PATCH'])]
@@ -126,9 +134,13 @@ final class LinkApiController extends AbstractController
         if (\count($violations) > 0) {
             return $this->violations($violations);
         }
-        $this->manager->save($link);
+        try {
+            $this->manager->save($link);
+        } catch (LinkRejectedException $exception) {
+            return $this->rejected($exception);
+        }
 
-        return $this->json(['data' => self::normalize($link)]);
+        return $this->ok('links.update', $request, ['data' => self::normalize($link)]);
     }
 
     #[Route('/links/{id}', name: 'api_link_delete', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
@@ -148,7 +160,7 @@ final class LinkApiController extends AbstractController
         $this->throttle($user);
         $result = $stats->build(Period::lastDays($request->query->getInt('days', 30)), link: $link);
 
-        return $this->json([
+        return $this->ok('links.stats', $request, [
             'data' => [
                 'from' => $result['period']->from->format('Y-m-d'),
                 'to' => $result['period']->to->format('Y-m-d'),
@@ -206,7 +218,7 @@ final class LinkApiController extends AbstractController
         }
         $this->denyAccessUnlessGranted(LinkVoter::MANAGE, $link);
 
-        return $this->json(['data' => [
+        return $this->ok('links.expand', $request, ['data' => [
             'id' => $link->getId(),
             'code' => $link->getCode(),
             'short_url' => $link->getShortUrl(),
@@ -241,7 +253,7 @@ final class LinkApiController extends AbstractController
             'clicks' => $row['clicks'],
         ], $clicks->topLinks($period->from, $period->to, $owner, 10));
 
-        return $this->json([
+        return $this->ok('stats.show', $request, [
             'data' => [
                 'from' => $period->from->format('Y-m-d'),
                 'to' => $period->to->format('Y-m-d'),
@@ -327,6 +339,26 @@ final class LinkApiController extends AbstractController
         }
 
         return null;
+    }
+
+    /**
+     * Hands a successful, resource-shaped payload to plugins before it is serialised.
+     * Additive only: the response keeps its status code and shape, plugins just add fields.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function ok(string $operation, Request $request, array $payload, int $status = Response::HTTP_OK): JsonResponse
+    {
+        $event = new ApiResponseEvent($operation, $request, $payload);
+        $this->dispatcher->dispatch($event);
+
+        return $this->json($event->getPayload(), $status);
+    }
+
+    /** A plugin refused the write (LinkPersistingEvent) - report it like the other 422s, not as a 500. */
+    private function rejected(LinkRejectedException $exception): JsonResponse
+    {
+        return $this->json(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /** @return array<string, mixed> */

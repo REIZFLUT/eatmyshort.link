@@ -20,7 +20,7 @@ services:
 
 when@test:
     services:
-        # _defaults of the block above do not reach this block, so repeat them: the event
+        # _defaults of the block above does not reach this block, so repeat them: the event
         # listeners below rely on autoconfigure to pick up their #[AsEventListener] tags.
         _defaults:
             autowire: true
@@ -31,9 +31,14 @@ when@test:
         App\Tests\HttpClient\MockResponseFactory: ~
 
         # Event-contract test doubles. Registered only here (autoconfigure tags them via
-        # #[AsEventListener]); all of them stay inert until a test sets EventTestState, so
-        # tests that do not touch the state see the unmodified application behaviour.
+        # #[AsEventListener]); every one of them stays inert until a test arms it, so tests
+        # that do not arm the corresponding state see the unmodified application behaviour.
+        # App\Tests\Support\EventTestState drives the core hooks, the tests/EventListener
+        # classes stand in for a plugin.
         App\Tests\Support\RedirectEventTestListener: ~
         App\Tests\Support\ClickEventTestListener: ~
         App\Tests\Support\LinkEventTestListener: ~
         App\Tests\Support\ShortCodeEventTestListener: ~
+        App\Tests\EventListener\ApiPluginListener: ~
+        App\Tests\EventListener\AdminUiPluginListener: ~
+        App\Tests\EventListener\LinkRejectionPluginListener: ~

@@ -38,5 +38,25 @@
             </div>
             {{ include('link/_table.html.twig', {links: recent, show_owner: false}) }}
         </section>
+
+        {% if widgets is not empty %}
+            <section class="stats">
+                {% for widget in widgets %}
+                    {% if widget.url %}
+                        <a class="stat" href="{{ widget.url }}">
+                            <div class="value">{{ widget.value }}</div>
+                            <div class="label">{{ widget.label }}</div>
+                            {% if widget.hint %}<div class="small muted hint">{{ widget.hint }}</div>{% endif %}
+                        </a>
+                    {% else %}
+                        <div class="stat">
+                            <div class="value">{{ widget.value }}</div>
+                            <div class="label">{{ widget.label }}</div>
+                            {% if widget.hint %}<div class="small muted hint">{{ widget.hint }}</div>{% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </section>
+        {% endif %}
     </div>
 {% endblock %}
