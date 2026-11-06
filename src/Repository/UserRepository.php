@@ -31,9 +31,34 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
+    /**
+     * Doctrine's EntityUserProvider (security.yaml: provider app_users, `property: email`)
+     * resolves the login identifier through `findOneBy(['email' => ...])`, passing the raw
+     * value from the login form. E-mail addresses are stored trimmed and lowercased (see
+     * User::setEmail()), so the identifier has to be normalised the same way before the
+     * comparison. Without this the result depends on the driver's string collation: `=`
+     * is exact on SQLite but case-insensitive by default on MariaDB/MySQL, so the same
+     * input would log in on one driver and not on the other. Normalising here makes both
+     * behave identically; there is no fuzzy or fallback matching.
+     *
+     * @param array<string, mixed>       $criteria
+     * @param array<string, string>|null $orderBy
+     *
+     * @return User|null
+     */
+    public function findOneBy(array $criteria, ?array $orderBy = null): ?object
+    {
+        if (isset($criteria['email']) && \is_string($criteria['email'])) {
+            $criteria['email'] = mb_strtolower(trim($criteria['email']));
+        }
+
+        return parent::findOneBy($criteria, $orderBy);
+    }
+
     public function findOneByEmail(string $email): ?User
     {
-        return $this->findOneBy(['email' => mb_strtolower(trim($email))]);
+        // Normalisation lives in findOneBy() so the login provider and this method share it.
+        return $this->findOneBy(['email' => $email]);
     }
 
     public function findOneByWebauthnHandle(string $handle): ?User
