@@ -14,14 +14,15 @@ namespace App\Plugin;
 final class PluginMetadata
 {
     /**
-     * @param array<string, mixed> $settings  free-form, plugin-defined
-     * @param string               $directory absolute path, no trailing slash
+     * @param array<string, mixed> $settings    free-form, plugin-defined
+     * @param ?string              $requiresApi version constraint against PluginApi::VERSION
+     * @param string               $directory   absolute path, no trailing slash
      */
     public function __construct(
         public readonly string $name,
         public readonly string $version,
         public readonly string $description,
-        public readonly ?string $requiresApp,
+        public readonly ?string $requiresApi,
         public readonly array $settings,
         public readonly string $directory,
     ) {
