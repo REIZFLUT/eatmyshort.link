@@ -12,6 +12,20 @@ services:
 
 when@test:
     services:
+        _defaults:
+            autowire: true
+            autoconfigure: true
         # The http_client mock_response_factory references this id; tests/ is not part of
         # the App\ resource above, so it needs an explicit definition.
         App\Tests\HttpClient\MockResponseFactory: ~
+
+        # Plugin-hook stand-ins: each is inert until a test arms it, so the rest of the
+        # suite sees the app exactly as before.
+        App\Tests\EventListener\ApiPluginListener: ~
+        App\Tests\EventListener\AdminUiPluginListener: ~
+        App\Tests\EventListener\LinkRejectionPluginListener: ~
+        # Mimics LinkManager's persistence hook (dispatching LinkPersistingEvent and turning a
+        # rejection into LinkRejectedException) so the API 422 path can be tested without
+        # reaching into src/Link.
+        App\Tests\EventListener\LinkPersistingShim:
+            tags: [{ name: doctrine.event_listener, event: preFlush }]
