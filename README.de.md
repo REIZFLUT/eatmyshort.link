@@ -2,9 +2,18 @@
 
 [English](README.md) · **Deutsch**
 
-Selbst gehosteter Kurzlink-Dienst für Unternehmen – wie Bitly, nur auf dem eigenen Server.
-Gebaut auf einem aktuellen Symfony-8.1-Kern (PHP 8.4, `declare(strict_types=1)` durchgehend,
-statische Analyse auf PHPStan-Level 8) mit SQLite: kein Node-Build, keine Queue, keine Worker.
+Ein moderner, sicherheitsbewusster, selbst gehosteter Kurzlink-Dienst für Unternehmen. Wie Bitly,
+nur vollständig unter eigener Kontrolle – auf der eigenen Infrastruktur, mit eigenen Domains und
+eigenen Daten.
+
+Auf einem aktuellen Symfony-8.1-Kern (PHP 8.4) verbindet EatMyShort.Link eine bewusst schlanke
+Architektur mit zeitgemäßen Sicherheitsverfahren aus dem Unternehmensumfeld: phishing-resistente
+Passkey-Anmeldung, optional verpflichtende Zwei-Faktor-Authentifizierung, strikte
+Content-Security-Policies, datenschutzfreundliche Statistik und feingranulare Zugriffskontrolle.
+Entwickelt mit Blick auf Wartbarkeit, betriebliche Einfachheit und langfristige Tragfähigkeit.
+
+Kein Node-Build, keine Queue, keine Hintergrunddienste. Eine moderne PHP-Anwendung, die ihre
+Aufgabe erledigt.
 
 ## Funktionen
 
@@ -36,7 +45,7 @@ statische Analyse auf PHPStan-Level 8) mit SQLite: kein Node-Build, keine Queue,
 
 ## Technik-Stack
 
-Aktuell, gepflegt, bewusst unspektakulär – nichts, was am Ende der Lebensdauer steht:
+Modern von Anfang an – aktuelle Versionen, Standardwerkzeuge, keine beweglichen Teile, die zusätzliche Betreuung brauchen:
 
 | | |
 |---|---|
@@ -47,9 +56,9 @@ Aktuell, gepflegt, bewusst unspektakulär – nichts, was am Ende der Lebensdaue
 | **Qualitätstore** | PHPStan Level 8, php-cs-fixer (`@Symfony`), 190+ Tests über HTTP-, Service- und Konsolenpfade, `composer audit` und per SHA gepinnte GitHub Actions im CI |
 | **Betrieb** | keine Queue, kein Redis, kein Worker zum Überwachen: Hausarbeit sind ein paar Cronzeilen (Klicks und Caches aufräumen, GeoIP-Datei erneuern) sowie ein Deploy-Skript mit Backup → Wartungsmodus → Migrationen → PHP-FPM-Reload → Rollback, rotierende Logdateien und ein `/healthz`-Endpunkt |
 
-## Sicherheit
+## Sicherheit & Datenschutz by Design
 
-Sicherheit ist hier eine Entwurfsvorgabe, keine Funktionsliste:
+Sicherheit und Datenschutz sind hier Architekturentscheidungen, keine nachträglich ergänzten Funktionen:
 
 - **Strikte CSP mit Nonce pro Anfrage** auf jeder App-Seite. Kurzdomains starten keine
   Session und setzen keine Cookies, eine Weiterleitung ist also nicht über Seiten hinweg

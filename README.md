@@ -2,9 +2,18 @@
 
 **English** · [Deutsch](README.de.md)
 
-Self-hosted short-link service for companies — like Bitly, but on your own server.
-Built on a current Symfony 8.1 core (PHP 8.4, `declare(strict_types=1)` everywhere,
-static analysis at PHPStan level 8) with SQLite: no Node build step, no queue, no workers.
+A modern, security-conscious, self-hosted short-link service built for companies. Like Bitly,
+but entirely under your control — on your own infrastructure, with your own domains and your
+own data.
+
+Built on a current Symfony 8.1 core (PHP 8.4), EatMyShort.Link combines a deliberately lean
+architecture with contemporary enterprise security practices: phishing-resistant passkey
+authentication, optional mandatory two-factor authentication, strict content security policies,
+privacy-first analytics and granular access controls. Designed with maintainability, operational
+simplicity and long-term sustainability in mind.
+
+No Node build step, no queue, no background workers. Just a modern PHP application that does
+its job.
 
 ## Features
 
@@ -36,7 +45,7 @@ static analysis at PHPStan level 8) with SQLite: no Node build step, no queue, n
 
 ## Tech stack
 
-Current, maintained, deliberately boring — nothing end-of-life to inherit:
+Modern by design — current versions, standard tooling, no moving parts to babysit:
 
 | | |
 |---|---|
@@ -47,9 +56,9 @@ Current, maintained, deliberately boring — nothing end-of-life to inherit:
 | **Quality gates** | PHPStan level 8, php-cs-fixer (`@Symfony`), 190+ tests covering HTTP, service and console paths, `composer audit` and SHA-pinned GitHub Actions in CI |
 | **Operations** | no queue, no Redis, no worker to monitor: housekeeping is a few cron lines (prune clicks and caches, refresh the GeoIP file), plus a deploy script with backup → maintenance mode → migrations → PHP-FPM reload → rollback, rotating log files and a `/healthz` endpoint |
 
-## Security
+## Security & Privacy by Design
 
-Security is a design constraint here, not a feature bullet:
+Security and privacy are architecture decisions in this project, not features added later:
 
 - **Strict CSP with a per-request nonce** on every app page. Short-link domains start no
   session and set no cookies, so a redirect cannot be correlated across sites.
