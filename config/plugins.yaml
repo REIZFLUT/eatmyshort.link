@@ -14,16 +14,33 @@
 #       <name>:
 #           enabled: true     # required; <name> must be the plugins/<name>/ directory name,
 #                             # [a-z0-9-], 3-40 characters
-#           settings: {}      # optional, free-form and plugin-defined; read through the plugin API
+#           settings: {}      # optional, free-form and plugin-defined; exposed to the plugin
+#                             # as the container parameter "app.plugins.<name>.settings"
 #
 # A "when@<env>:" section has the same shape and is merged over the entries above for that
 # environment, so one environment can enable or disable a plugin or override single
 # settings without touching the shared list.
-plugins: {}
+#
+# The two entries below ship as working examples. Both stay disabled by default - enable
+# one to use it.
+plugins:
+    utm-tagging:
+        enabled: false
+        # Appends campaign parameters to redirect targets. See plugins/utm-tagging/README.md.
+        settings: {}
+    click-webhook:
+        enabled: false
+        # Reports recorded clicks as a signed JSON webhook. See plugins/click-webhook/README.md.
+        settings: {}
 
+# Example of enabling one plugin for a single environment. Uncomment the block below to try
+# utm-tagging on a development instance; it is merged over the entries above and only
+# applies when APP_ENV is "dev".
 # when@dev:
 #     plugins:
-#         example-utm:
+#         utm-tagging:
 #             enabled: true
 #             settings:
-#                 campaign: newsletter
+#                 source: newsletter
+#                 medium: email
+#                 campaign: lokaltest

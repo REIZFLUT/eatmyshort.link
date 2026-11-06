@@ -1,0 +1,11 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # The operator's free-form settings from config/plugins.yaml are exposed by the kernel
+    # as the container parameter app.plugins.<name>.settings (see plugins/README.md). The
+    # listener takes that array; the HttpClientInterface and the logger are autowired.
+    Plugin\ClickWebhook\ClickWebhookListener:
+        arguments:
+            $settings: '%app.plugins.click-webhook.settings%'

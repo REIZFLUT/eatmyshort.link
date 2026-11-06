@@ -1,0 +1,5 @@
+name: utm-tagging
+version: 1.0.0
+description: Appends campaign (UTM) parameters to redirect targets so short links can be attributed to a source.
+requires:
+    api: '>=1.0'

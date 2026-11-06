@@ -42,3 +42,6 @@ when@test:
         App\Tests\EventListener\ApiPluginListener: ~
         App\Tests\EventListener\AdminUiPluginListener: ~
         App\Tests\EventListener\LinkRejectionPluginListener: ~
+        # Stands in for the utm-tagging plugin (which the test whitelist does not load) and
+        # drives the real UtmTagger over controlled settings. Inert until a test arms it.
+        App\Tests\EventListener\UtmTaggingPluginListener: ~

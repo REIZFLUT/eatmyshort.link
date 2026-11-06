@@ -1,0 +1,14 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # The operator's free-form settings from config/plugins.yaml are exposed by the kernel
+    # as the container parameter app.plugins.<name>.settings (see plugins/README.md), so a
+    # plugin reaches them from its own services.yaml without knowing the app internals.
+    Plugin\UtmTagging\UtmTagger:
+        arguments:
+            $settings: '%app.plugins.utm-tagging.settings%'
+
+    # Autoconfigured via #[AsEventListener], so it joins the shared event dispatcher.
+    Plugin\UtmTagging\UtmTaggingListener: ~
