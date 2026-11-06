@@ -20,7 +20,7 @@
                     {{ form_row(quick_form.code) }}
                     <button type="submit" class="btn btn-primary">{{ 'dashboard.shorten_submit'|trans }}</button>
                 {{ form_end(quick_form) }}
-                <p class="small muted">{{ 'dashboard.shorten_hint'|trans }} <a href="{{ path('app_link_new') }}">{{ 'dashboard.more_options'|trans }}</a></p>
+                <p class="small muted hint">{{ 'dashboard.shorten_hint'|trans }} <a href="{{ path('app_link_new') }}">{{ 'dashboard.more_options'|trans }}</a></p>
             {% else %}
                 <p class="muted">{{ 'flash.no_domains'|trans }}</p>
             {% endif %}

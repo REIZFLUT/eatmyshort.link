@@ -183,7 +183,7 @@ main { flex: 1; padding: 28px 0 56px; }
 
 .field { margin-bottom: 16px; }
 .field > label, .label { display: block; font-weight: 550; margin-bottom: 6px; }
-.field .help { color: var(--muted); font-size: .85rem; margin-top: 5px; }
+.field .help { color: var(--muted); font-size: .85rem; margin-top: 8px; }
 input[type=text], input[type=email], input[type=url], input[type=password], input[type=number],
 input[type=search], input[type=datetime-local], input[type=file], select, textarea {
     width: 100%;
@@ -207,6 +207,7 @@ input[aria-invalid=true], .has-error input, .has-error select { border-color: va
 .choices .check { margin-bottom: 0; }
 .form-actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px; }
+.hint { margin: 16px 0 0; }
 fieldset { border: 0; padding: 0; margin: 0; }
 legend { font-weight: 650; margin-bottom: 8px; padding: 0; }
 .otp { font-family: var(--mono); font-size: 1.35rem; letter-spacing: .3em; text-align: center; }
