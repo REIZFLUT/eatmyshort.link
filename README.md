@@ -3,7 +3,8 @@
 **English** · [Deutsch](README.de.md)
 
 Self-hosted short-link service for companies — like Bitly, but on your own server.
-Built on a lean Symfony 8 core with SQLite, no Node build step and no background workers.
+Built on a current Symfony 8.1 core (PHP 8.4, `declare(strict_types=1)` everywhere,
+static analysis at PHPStan level 8) with SQLite: no Node build step, no queue, no workers.
 
 ## Features
 
@@ -21,8 +22,8 @@ Built on a lean Symfony 8 core with SQLite, no Node build step and no background
   logins; mandatory 2FA for admins can be switched on.
 - **Bookmarklets** – shorten the page you are on from the bookmarks bar (with or without a custom code),
   optionally create-and-follow, plus share links on every link page.
-- **CSV import** – bring a grown YOURLS instance or an Excel list over in one step: preview first,
-  YOURLS column names (`url`, `keyword`, `title`) are recognised, duplicates are skipped.
+- **CSV import** – bring an existing short-link export or an Excel list over in one step: preview first,
+  customary column names (`url`, `keyword`, `title`) are recognised, duplicates are skipped.
 - **Working list** – sort by clicks, last click, target or code; activate, deactivate, delete or move
   several links at once (only links you are allowed to change).
 - **Automatic page titles** – fetched from the target page when a link is created (switchable, with an
@@ -32,6 +33,41 @@ Built on a lean Symfony 8 core with SQLite, no Node build step and no background
 - Interface in German and English, light/dark, usable on mobile, custom logo and accent colour
   (default: Simpsons yellow `#fed90f`; text and font colours are calculated for WCAG contrast,
   the favicon picks up the colour).
+
+## Tech stack
+
+Current, maintained, deliberately boring — nothing end-of-life to inherit:
+
+| | |
+|---|---|
+| **Framework** | Symfony 8.1 — attributes instead of XML/YAML wiring, dependency injection throughout, `declare(strict_types=1)` in every file, typed properties and readonly where they belong |
+| **Runtime** | PHP 8.4 (8.5 works) with `intl`, `pdo_sqlite`, `sodium`, `mbstring`; `gd` for PNG QR codes and `apcu` are optional |
+| **Data** | Doctrine ORM and migrations on SQLite in WAL mode — no database server to install, patch or back up on the side |
+| **Frontend** | Twig plus Symfony AssetMapper: no Node, no bundler, no npm dependency tree |
+| **Quality gates** | PHPStan level 8, php-cs-fixer (`@Symfony`), 190+ tests covering HTTP, service and console paths, `composer audit` and SHA-pinned GitHub Actions in CI |
+| **Operations** | no queue, no Redis, no worker to monitor: housekeeping is a few cron lines (prune clicks and caches, refresh the GeoIP file), plus a deploy script with backup → maintenance mode → migrations → PHP-FPM reload → rollback, rotating log files and a `/healthz` endpoint |
+
+## Security
+
+Security is a design constraint here, not a feature bullet:
+
+- **Strict CSP with a per-request nonce** on every app page. Short-link domains start no
+  session and set no cookies, so a redirect cannot be correlated across sites.
+- **Nothing secret is stored in clear**: API tokens only as SHA-256 hashes, password resets
+  as selector/verifier pairs, TOTP secrets encrypted with `APP_SECRET` — and a placeholder
+  secret is refused at boot in production.
+- **Sessions hold only a `crc32c` of the password hash**: changing a password or role, or
+  disabling an account, ends every open session immediately.
+- **Two-factor authentication** with WebAuthn passkeys or TOTP plus salted backup codes,
+  throttled login and code verification; changing 2FA, tokens or passkeys requires
+  re-authentication first.
+- **Admin access** is protected by an IP allowlist (IPv4/IPv6, CIDR) *and* a voter on every
+  admin controller; unknown hosts never reach application routes at all.
+- **Privacy by default**: no full IP addresses (IPv4 `/24`, IPv6 `/48`), no external
+  analytics or geolocation service — visitor data never leaves your server.
+- **Every query is parameterised** through Doctrine/DBAL (no string-built SQL), Twig escapes
+  by default, title fetching is guarded against SSRF, and secrets live in `.env` outside the
+  web root — never in the repository.
 
 ## Installation
 

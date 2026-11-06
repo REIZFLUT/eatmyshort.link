@@ -3,7 +3,8 @@
 [English](README.md) · **Deutsch**
 
 Selbst gehosteter Kurzlink-Dienst für Unternehmen – wie Bitly, nur auf dem eigenen Server.
-Gebaut auf einem schlanken Symfony-8-Kern mit SQLite, ohne Node-Build und ohne Hintergrunddienste.
+Gebaut auf einem aktuellen Symfony-8.1-Kern (PHP 8.4, `declare(strict_types=1)` durchgehend,
+statische Analyse auf PHPStan-Level 8) mit SQLite: kein Node-Build, keine Queue, keine Worker.
 
 ## Funktionen
 
@@ -20,8 +21,9 @@ Gebaut auf einem schlanken Symfony-8-Kern mit SQLite, ohne Node-Build und ohne H
   2FA-Pflicht für Admins einschaltbar.
 - **Lesezeichen** – die aktuelle Seite direkt aus der Lesezeichenleiste kürzen (mit oder ohne Wunschkürzel),
   optional anlegen und gleich weiterleiten; Teilen-Links auf jeder Link-Seite.
-- **CSV-Import** – eine gewachsene YOURLS-Instanz oder eine Excel-Liste in einem Schritt übernehmen:
-  erst Vorschau, YOURLS-Spalten (`url`, `keyword`, `title`) werden erkannt, Dubletten übersprungen.
+- **CSV-Import** – einen Export eines bestehenden Kurzlinkers oder eine Excel-Liste in einem Schritt
+  übernehmen: erst Vorschau, gängige Spaltennamen (`url`, `keyword`, `title`) werden erkannt,
+  Dubletten übersprungen.
 - **Arbeitsliste** – nach Klicks, letztem Klick, Ziel oder Kürzel sortieren; mehrere Links auf einmal
   aktivieren, deaktivieren, löschen oder verschieben (nur Links, die man ändern darf).
 - **Automatische Seitentitel** – beim Anlegen vom Ziel abgeholt (abschaltbar, mit SSRF-Schutz, damit der
@@ -31,6 +33,42 @@ Gebaut auf einem schlanken Symfony-8-Kern mit SQLite, ohne Node-Build und ohne H
 - Oberfläche auf Deutsch und Englisch, hell/dunkel, mobil nutzbar, eigenes Logo und Akzentfarbe
   (Standard: Simpsons-Gelb `#fed90f`; Schrift- und Textfarben werden für Kontrast nach WCAG berechnet,
   das Favicon übernimmt die Farbe).
+
+## Technik-Stack
+
+Aktuell, gepflegt, bewusst unspektakulär – nichts, was am Ende der Lebensdauer steht:
+
+| | |
+|---|---|
+| **Framework** | Symfony 8.1 – PHP-Attributes statt XML/YAML-Verdrahtung, Dependency Injection durchgehend, `declare(strict_types=1)` in jeder Datei, typisierte Properties und `readonly`, wo es hingehört |
+| **Laufzeit** | PHP 8.4 (8.5 funktioniert) mit `intl`, `pdo_sqlite`, `sodium`, `mbstring`; `gd` für PNG-QR-Codes und `apcu` sind optional |
+| **Daten** | Doctrine ORM und Migrationen auf SQLite im WAL-Modus – kein Datenbankserver, der zusätzlich installiert, gepatcht und gesichert werden muss |
+| **Frontend** | Twig plus Symfony AssetMapper: kein Node, kein Bundler, kein npm-Abhängigkeitsbaum |
+| **Qualitätstore** | PHPStan Level 8, php-cs-fixer (`@Symfony`), 190+ Tests über HTTP-, Service- und Konsolenpfade, `composer audit` und per SHA gepinnte GitHub Actions im CI |
+| **Betrieb** | keine Queue, kein Redis, kein Worker zum Überwachen: Hausarbeit sind ein paar Cronzeilen (Klicks und Caches aufräumen, GeoIP-Datei erneuern) sowie ein Deploy-Skript mit Backup → Wartungsmodus → Migrationen → PHP-FPM-Reload → Rollback, rotierende Logdateien und ein `/healthz`-Endpunkt |
+
+## Sicherheit
+
+Sicherheit ist hier eine Entwurfsvorgabe, keine Funktionsliste:
+
+- **Strikte CSP mit Nonce pro Anfrage** auf jeder App-Seite. Kurzdomains starten keine
+  Session und setzen keine Cookies, eine Weiterleitung ist also nicht über Seiten hinweg
+  verkettbar.
+- **Nichts Geheimes liegt im Klartext**: API-Tokens nur als SHA-256-Hash, Passwort-Resets als
+  Selector/Verifier-Paar, TOTP-Schlüssel mit `APP_SECRET` verschlüsselt – und ein
+  Platzhalter-Secret wird in Produktion beim Start abgelehnt.
+- **In der Session liegt nur ein `crc32c` des Passwort-Hashes**: Passwort- oder Rollenwechsel
+  und das Sperren eines Kontos beenden offene Sessions sofort.
+- **Zwei-Faktor** über WebAuthn-Passkeys oder TOTP mit gesalzenen Backup-Codes, gedrosselter
+  Login und gedrosselte Code-Prüfung; Änderungen an 2FA, Tokens oder Passkeys verlangen
+  vorher eine erneute Bestätigung.
+- **Admin-Bereich** über IP-Freigabeliste (IPv4/IPv6, CIDR) **und** einen Voter auf jedem
+  Admin-Controller abgesichert; unbekannte Hosts erreichen die App-Routen gar nicht erst.
+- **Datenschutz als Voreinstellung**: keine vollständigen IP-Adressen (IPv4 `/24`, IPv6 `/48`),
+  keine externen Analyse- oder Geodienste – Besucherdaten verlassen den Server nicht.
+- **Jede Abfrage ist parametrisiert** über Doctrine/DBAL (kein zusammengebautes SQL), Twig
+  escaped standardmäßig, das Holen von Seitentiteln ist gegen SSRF geschützt, und Zugangsdaten
+  liegen in einer `.env` außerhalb des Webroots – nie im Repository.
 
 ## Installation
 
