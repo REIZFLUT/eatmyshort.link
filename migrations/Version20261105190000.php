@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace DoctrineMigrations;
 
 use Doctrine\DBAL\Schema\Schema;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Hand written: doctrine:migrations:diff would recreate the whole schema because
- * the database of a fresh checkout is empty.
+ * Adds the per-user salt for the hashed TOTP backup codes. Described through the
+ * schema API so the added column is emitted with the platform's own DDL.
  */
 final class Version20261105190000 extends AbstractMigration
 {
@@ -20,11 +21,12 @@ final class Version20261105190000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE app_user ADD COLUMN backup_codes_salt VARCHAR(32) DEFAULT NULL');
+        $schema->getTable('app_user')
+            ->addColumn('backup_codes_salt', Types::STRING, ['length' => 32, 'notnull' => false]);
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE app_user DROP COLUMN backup_codes_salt');
+        $schema->getTable('app_user')->dropColumn('backup_codes_salt');
     }
 }
