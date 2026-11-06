@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Link;
 
 use App\Entity\Link;
+use App\Event\Link\LinkDeletedEvent;
+use App\Event\Link\LinkPersistingEvent;
+use App\Event\Link\LinkSavedEvent;
 use App\Settings\Settings;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Shared create/update logic for the web UI and the API.
@@ -21,6 +25,7 @@ final readonly class LinkManager
         private ShortCodeGenerator $codes,
         private Settings $settings,
         private LinkTitleFetcher $titleFetcher,
+        private EventDispatcherInterface $dispatcher,
     ) {
     }
 
@@ -54,20 +59,37 @@ final readonly class LinkManager
      */
     public function save(Link $link, bool $fetchTitle = true): void
     {
-        if ($fetchTitle && null === $link->getId()) {
+        $created = null === $link->getId();
+
+        // Plugins can refuse the write before anything is persisted. A rejection carries a
+        // message the caller shows (form error in the web UI, 422 in the API), so the caller
+        // can exit cleanly instead of hitting a half-written link.
+        $persisting = new LinkPersistingEvent($link, $created);
+        $this->dispatcher->dispatch($persisting);
+        if ($persisting->isRejected()) {
+            $message = $persisting->getRejectionMessage();
+
+            throw new LinkRejectedException(null !== $message && '' !== $message ? $message : 'The link was rejected.');
+        }
+
+        if ($fetchTitle && $created) {
             $this->fetchTitle($link);
         }
         $link->touch();
-        if (null === $link->getId()) {
+        if ($created) {
             $this->em->persist($link);
         }
         $this->em->flush();
+
+        $this->dispatcher->dispatch(new LinkSavedEvent($link, $created));
     }
 
     public function delete(Link $link): void
     {
         $this->em->remove($link);
         $this->em->flush();
+
+        $this->dispatcher->dispatch(new LinkDeletedEvent($link));
     }
 
     /**

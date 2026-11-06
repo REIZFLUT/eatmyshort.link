@@ -7,13 +7,17 @@ namespace App\Controller;
 use App\Domain\HostRegistry;
 use App\Entity\Domain;
 use App\Entity\Link;
+use App\Event\Redirect\RedirectResolvingEvent;
+use App\Event\Redirect\RedirectUnresolvedEvent;
 use App\Link\AcceptLanguageMatcher;
 use App\Repository\LinkRepository;
 use App\Tracking\ClickRecorder;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Serves every request on a short-link domain (see ShortLinkHostListener).
@@ -24,6 +28,8 @@ final class RedirectController extends AbstractController
         private readonly HostRegistry $hosts,
         private readonly LinkRepository $links,
         private readonly ClickRecorder $clickRecorder,
+        private readonly EventDispatcherInterface $dispatcher,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -53,12 +59,34 @@ final class RedirectController extends AbstractController
                 return $this->page('redirect/gone.html.twig', Response::HTTP_GONE, ['domain' => $domain]);
             }
 
+            $resolving = new RedirectResolvingEvent($request, $link, self::targetFor($link, $request), $link->getRedirectType());
+            $this->dispatcher->dispatch($resolving);
+            if ($resolving->isVetoed()) {
+                // A veto must be indistinguishable from an unknown link: the visitor gets the
+                // 404 page and no click is recorded. Only the log knows a plugin intervened.
+                $this->logger->info('Redirect vetoed by plugin: {reason}', [
+                    'reason' => $resolving->getVetoReason(),
+                    'link' => $link->getId(),
+                ]);
+
+                return $this->page('redirect/not_found.html.twig', Response::HTTP_NOT_FOUND, ['domain' => $domain]);
+            }
+
             $this->clickRecorder->schedule($request, $link);
 
-            return $this->redirectTo(self::targetFor($link, $request), $link->getRedirectType());
+            return $this->redirectTo($resolving->getTarget(), $resolving->getStatusCode());
         }
 
         $domain = $this->activeDomain($request);
+        // Unknown path: give plugins a chance to turn it into a redirect of their own before
+        // the configured fallback runs. The domain is passed even when it is inactive; it is
+        // only null for a host that is no short domain at all. resolveDomain() is memoised by
+        // the registry, so this adds no query.
+        $unresolved = new RedirectUnresolvedEvent($request, $this->hosts->resolveDomain($request->getHost()));
+        $this->dispatcher->dispatch($unresolved);
+        if ($unresolved->hasTarget()) {
+            return $this->redirectTo((string) $unresolved->getTarget(), $unresolved->getStatusCode());
+        }
         if (null === $domain) {
             return $this->unknownDomain();
         }

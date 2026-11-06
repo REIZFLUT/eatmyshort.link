@@ -6,6 +6,8 @@ namespace App\Tracking;
 
 use App\Entity\Click;
 use App\Entity\Link;
+use App\Event\Tracking\ClickRecordedEvent;
+use App\Event\Tracking\ClickRecordingEvent;
 use App\Link\AcceptLanguageMatcher;
 use App\Settings\Settings;
 use Doctrine\DBAL\ParameterType;
@@ -17,6 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Records clicks after the redirect has been sent: kernel.terminate runs after
@@ -41,6 +44,7 @@ final class ClickRecorder
         #[Autowire(service: 'limiter.redirect')]
         private readonly RateLimiterFactoryInterface $limiter,
         private readonly LoggerInterface $logger,
+        private readonly EventDispatcherInterface $dispatcher,
     ) {
     }
 
@@ -71,6 +75,21 @@ final class ClickRecorder
     {
         $link = $this->em->find(Link::class, $linkId);
         if (null === $link) {
+            return null;
+        }
+
+        // Give plugins a veto before any write happens: a vetoed click is simply not
+        // recorded (bots, internal traffic, a customer's test calls). This runs inside
+        // kernel.terminate, after fastcgi_finish_request(), so listeners must be fast and
+        // must not expect a response.
+        $recording = new ClickRecordingEvent($request, $link);
+        $this->dispatcher->dispatch($recording);
+        if ($recording->isVetoed()) {
+            $this->logger->info('Click recording vetoed by plugin: {reason}', [
+                'reason' => $recording->getVetoReason(),
+                'link' => $linkId,
+            ]);
+
             return null;
         }
 
@@ -113,12 +132,25 @@ final class ClickRecorder
             $click->setCountryCode($this->geoIp->country($ip));
         }
 
-        $this->insert($click, $linkId);
+        $uniqueVisitor = $this->insert($click, $linkId);
+
+        // Still inside kernel.terminate: the row is committed, the counter is updated, and
+        // the visitor already got their redirect - anything slow here costs nobody a
+        // millisecond, but it can also never reach the response. A listener throwing must
+        // not undo the click; the caller logs and moves on.
+        $this->dispatcher->dispatch(new ClickRecordedEvent(
+            $link,
+            $at,
+            $click->getCountryCode(),
+            $click->getDeviceType(),
+            $uniqueVisitor,
+        ));
 
         return $click;
     }
 
-    private function insert(Click $click, int $linkId): void
+    /** @return bool true when this visitor/day combination had not been seen before */
+    private function insert(Click $click, int $linkId): bool
     {
         $connection = $this->em->getConnection();
         $connection->beginTransaction();
@@ -146,17 +178,28 @@ final class ClickRecorder
                     ParameterType::STRING, ParameterType::STRING, ParameterType::BOOLEAN, ParameterType::INTEGER,
                 ],
             );
-            $connection->executeStatement(
-                'UPDATE link SET click_count = click_count + 1, last_click_at = ? WHERE id = ?',
-                [$click->getClickedAt()->format('Y-m-d H:i:s'), $linkId],
-                [ParameterType::STRING, ParameterType::INTEGER],
-            );
+            // The counter update doubles as the uniqueness probe: RETURNING counts this
+            // visitor's rows for the day after the insert, so a count of one means the
+            // visitor is new today. Folding it into the UPDATE keeps the hot click path at
+            // the same number of statements instead of adding a second round trip.
+            $visitors = (int) $connection->executeQuery(
+                'UPDATE link SET click_count = click_count + 1, last_click_at = ? WHERE id = ? RETURNING (SELECT COUNT(*) FROM click WHERE clicked_day = ? AND visitor_hash = ?)',
+                [
+                    $click->getClickedAt()->format('Y-m-d H:i:s'),
+                    $linkId,
+                    $click->getClickedDay()->format('Y-m-d'),
+                    $click->getVisitorHash(),
+                ],
+                [ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING],
+            )->fetchOne();
             $connection->commit();
         } catch (\Throwable $e) {
             $connection->rollBack();
 
             throw $e;
         }
+
+        return 1 === $visitors;
     }
 
     private static function referrerHost(Request $request): ?string

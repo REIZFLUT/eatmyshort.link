@@ -20,6 +20,20 @@ services:
 
 when@test:
     services:
+        # _defaults of the block above do not reach this block, so repeat them: the event
+        # listeners below rely on autoconfigure to pick up their #[AsEventListener] tags.
+        _defaults:
+            autowire: true
+            autoconfigure: true
+
         # The http_client mock_response_factory references this id; tests/ is not part of
         # the App\ resource above, so it needs an explicit definition.
         App\Tests\HttpClient\MockResponseFactory: ~
+
+        # Event-contract test doubles. Registered only here (autoconfigure tags them via
+        # #[AsEventListener]); all of them stay inert until a test sets EventTestState, so
+        # tests that do not touch the state see the unmodified application behaviour.
+        App\Tests\Support\RedirectEventTestListener: ~
+        App\Tests\Support\ClickEventTestListener: ~
+        App\Tests\Support\LinkEventTestListener: ~
+        App\Tests\Support\ShortCodeEventTestListener: ~

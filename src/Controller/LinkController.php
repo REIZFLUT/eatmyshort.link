@@ -9,6 +9,7 @@ use App\Entity\Link;
 use App\Entity\User;
 use App\Form\LinkType;
 use App\Link\LinkManager;
+use App\Link\LinkRejectedException;
 use App\Qr\QrCodeRenderer;
 use App\Repository\ClickRepository;
 use App\Repository\DomainRepository;
@@ -19,6 +20,7 @@ use App\Stats\Period;
 use App\Stats\StatsBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Request;
@@ -176,18 +178,22 @@ final class LinkController extends AbstractController
         $this->manager->applyDefaults($link);
 
         $violations = $this->manager->validate($link);
-        if (0 === \count($violations)) {
-            $this->manager->save($link);
-            $this->addFlash('success', $translator->trans('flash.link_quick_created', ['%url%' => $link->getShortUrl()]));
-
-            return $goto
-                ? $this->redirect($link->getTargetUrl())
-                : $this->redirectToRoute('app_link_show', ['id' => $link->getId()]);
-        }
-
         $messages = [];
         foreach ($violations as $violation) {
             $messages[] = $violation->getMessage();
+        }
+
+        if ([] === $messages) {
+            try {
+                $this->manager->save($link);
+                $this->addFlash('success', $translator->trans('flash.link_quick_created', ['%url%' => $link->getShortUrl()]));
+
+                return $goto
+                    ? $this->redirect($link->getTargetUrl())
+                    : $this->redirectToRoute('app_link_show', ['id' => $link->getId()]);
+            } catch (LinkRejectedException $e) {
+                $messages[] = $e->getMessage();
+            }
         }
 
         return $this->render('link/quick.html.twig', [
@@ -470,8 +476,17 @@ final class LinkController extends AbstractController
             if ('delete' === $action) {
                 $this->manager->delete($link);
             } else {
+                $wasActive = $link->isActive();
                 $link->setActive('activate' === $action);
-                $this->manager->save($link);
+                try {
+                    $this->manager->save($link);
+                } catch (LinkRejectedException) {
+                    // A plugin refused the write: leave the entity as it was and count this
+                    // link as skipped instead of aborting the whole bulk action with a 500.
+                    $link->setActive($wasActive);
+                    ++$denied;
+                    continue;
+                }
             }
             ++$changed;
         }
@@ -502,8 +517,16 @@ final class LinkController extends AbstractController
                 ++$conflicts;
                 continue;
             }
+            $previousDomain = $link->getDomain();
             $link->setDomain($target);
-            $this->manager->save($link);
+            try {
+                $this->manager->save($link);
+            } catch (LinkRejectedException) {
+                // Undo the in-memory move so a later flush cannot persist a rejected change.
+                $link->setDomain($previousDomain);
+                ++$denied;
+                continue;
+            }
             ++$changed;
         }
 
@@ -516,10 +539,16 @@ final class LinkController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->save($link);
-            $this->addFlash('success', $flash);
+            try {
+                $this->manager->save($link);
+                $this->addFlash('success', $flash);
 
-            return $this->redirectToRoute('app_link_show', ['id' => $link->getId()]);
+                return $this->redirectToRoute('app_link_show', ['id' => $link->getId()]);
+            } catch (LinkRejectedException $e) {
+                // A plugin refused the write: surface its message as a form error and re-render
+                // with the entered values, exactly like a validation error - never a 500.
+                $form->addError(new FormError($e->getMessage()));
+            }
         }
 
         return $this->render($template, ['form' => $form, 'link' => $link], new Response(
