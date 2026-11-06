@@ -8,6 +8,7 @@ use App\Entity\Click;
 use App\Entity\Link;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -138,6 +139,12 @@ class ClickRepository extends ServiceEntityRepository
     /**
      * Deletes old clicks in small chunks. One big DELETE would hold SQLite's write lock
      * longer than the busy timeout (5 s) and block tracking for the whole duration.
+     *
+     * Each chunk is selected first and then deleted by primary key. The previous
+     * single statement used SQLite's `rowid` in the subquery and would additionally be
+     * rejected by MySQL, which refuses to modify a table that a subquery in the same
+     * statement reads. Selecting the ids keeps the chunking intact: the write lock is
+     * released between chunks and the redirect writer gets a window to run.
      */
     public function deleteOlderThan(\DateTimeImmutable $day, int $chunkSize = 5000): int
     {
@@ -145,13 +152,27 @@ class ClickRepository extends ServiceEntityRepository
         $deleted = 0;
 
         while (true) {
-            $affected = $connection->executeStatement(
-                'DELETE FROM click WHERE rowid IN (SELECT rowid FROM click WHERE clicked_day < ? LIMIT ?)',
+            /** @var list<int> $ids */
+            $ids = array_map(intval(...), $connection->executeQuery(
+                'SELECT id FROM click WHERE clicked_day < ? ORDER BY id LIMIT ?',
                 [$day->format('Y-m-d'), $chunkSize],
                 [ParameterType::STRING, ParameterType::INTEGER],
+            )->fetchFirstColumn());
+
+            // Nothing older left.
+            if ([] === $ids) {
+                break;
+            }
+
+            $affected = $connection->executeStatement(
+                'DELETE FROM click WHERE id IN (?)',
+                [$ids],
+                [ArrayParameterType::INTEGER],
             );
             $deleted += $affected;
-            if ($affected < $chunkSize) {
+
+            // A chunk shorter than the limit means this was the last one.
+            if (\count($ids) < $chunkSize) {
                 break;
             }
             // Give the redirect writer a chance to get the lock between chunks.

@@ -156,6 +156,22 @@ final class ClickRecorder
         $connection->beginTransaction();
 
         try {
+            // The uniqueness probe is a plain SELECT taken before the INSERT: a count of
+            // zero means this visitor_hash had no click on this calendar day yet, so the
+            // row about to be written is the first one and the visitor is unique today.
+            // It has to be its own statement instead of being folded into the counter
+            // UPDATE with RETURNING (which counted the rows after the insert): MySQL
+            // cannot use RETURNING with UPDATE at all, MariaDB only with INSERT/DELETE,
+            // so the RETURNING form broke the click path on those drivers. The extra read
+            // is accepted on this hot path - it is served by the existing idx_click_day
+            // index, which narrows the scan to the current day before visitor_hash is
+            // matched, and it runs after the response is sent (kernel.terminate).
+            $seen = (int) $connection->executeQuery(
+                'SELECT COUNT(*) FROM click WHERE clicked_day = ? AND visitor_hash = ?',
+                [$click->getClickedDay()->format('Y-m-d'), $click->getVisitorHash()],
+                [ParameterType::STRING, ParameterType::STRING],
+            )->fetchOne();
+
             $connection->executeStatement(
                 'INSERT INTO click (clicked_at, clicked_day, visitor_hash, ip_prefix, country_code, referrer_host, device_type, browser, os, language, bot, link_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
@@ -178,20 +194,14 @@ final class ClickRecorder
                     ParameterType::STRING, ParameterType::STRING, ParameterType::BOOLEAN, ParameterType::INTEGER,
                 ],
             );
-            // The counter update doubles as the uniqueness probe: RETURNING counts this
-            // visitor's rows for the day after the insert, so a count of one means the
-            // visitor is new today. Folding it into the UPDATE keeps the hot click path at
-            // the same number of statements instead of adding a second round trip.
-            $visitors = (int) $connection->executeQuery(
-                'UPDATE link SET click_count = click_count + 1, last_click_at = ? WHERE id = ? RETURNING (SELECT COUNT(*) FROM click WHERE clicked_day = ? AND visitor_hash = ?)',
-                [
-                    $click->getClickedAt()->format('Y-m-d H:i:s'),
-                    $linkId,
-                    $click->getClickedDay()->format('Y-m-d'),
-                    $click->getVisitorHash(),
-                ],
-                [ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING],
-            )->fetchOne();
+
+            // The counter update no longer probes anything: it only maintains the link's
+            // click_count and last_click_at, exactly as before.
+            $connection->executeStatement(
+                'UPDATE link SET click_count = click_count + 1, last_click_at = ? WHERE id = ?',
+                [$click->getClickedAt()->format('Y-m-d H:i:s'), $linkId],
+                [ParameterType::STRING, ParameterType::INTEGER],
+            );
             $connection->commit();
         } catch (\Throwable $e) {
             $connection->rollBack();
@@ -199,7 +209,7 @@ final class ClickRecorder
             throw $e;
         }
 
-        return 1 === $visitors;
+        return 0 === $seen;
     }
 
     private static function referrerHost(Request $request): ?string
