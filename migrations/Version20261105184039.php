@@ -108,7 +108,14 @@ final class Version20261105184039 extends AbstractMigration
 
         $link = $schema->createTable('link');
         $link->addColumn('id', Types::INTEGER, ['autoincrement' => true]);
-        $link->addColumn('code', Types::STRING, ['length' => 64]);
+        // MySQL/MariaDB compare text case-insensitively unless told otherwise, SQLite does not.
+        // App\Doctrine\BinaryCollationListener pins this column to a binary collation on
+        // MySQL-family platforms so a lookup resolves the same rows on both drivers; the
+        // migration has to produce exactly that, or doctrine:schema:validate reports drift.
+        $code = $link->addColumn('code', Types::STRING, ['length' => 64]);
+        if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            $code->setPlatformOption('collation', 'utf8mb4_bin');
+        }
         $link->addColumn('target_url', Types::TEXT);
         $link->addColumn('title', Types::STRING, ['length' => 255, 'notnull' => false]);
         $link->addColumn('redirect_type', Types::SMALLINT);

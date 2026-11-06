@@ -14,7 +14,10 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: ClickRepository::class)]
 #[ORM\Index(name: 'idx_click_link_day', columns: ['link_id', 'clicked_day'])]
-#[ORM\Index(name: 'idx_click_day', columns: ['clicked_day'])]
+// Answers the unique-visitor probe ("clicked_day = ? AND visitor_hash = ?") that ClickRecorder
+// runs before the insert, and covers everything that filters on the day alone - which is why
+// the single-column index it replaces is gone (see Version20261106090000).
+#[ORM\Index(name: 'idx_click_day_visitor', columns: ['clicked_day', 'visitor_hash'])]
 class Click
 {
     #[ORM\Id]

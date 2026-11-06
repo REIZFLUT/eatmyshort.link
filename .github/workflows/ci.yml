@@ -43,3 +43,50 @@ jobs:
           PHP_CS_FIXER_IGNORE_ENV: 1
       # Compiling the prod container catches env/parameter mistakes the dev cache hides.
       - run: php bin/console cache:warmup --env=prod
+
+  # The app runs on SQLite by default and on MariaDB/MySQL if the operator says so. This job
+  # exists so that second path cannot rot silently: it uses the discrete DB_* variables (no
+  # DATABASE_URL) exactly like a Laravel-minded operator would, and runs the same suite.
+  test-mariadb:
+    runs-on: ubuntu-24.04
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root-secret
+          MARIADB_DATABASE: eatmyshort_ci
+          MARIADB_USER: eatmyshort
+          MARIADB_PASSWORD: ci-secret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      APP_ENV: dev
+      APP_SECRET: 'ci-only-secret-0123456789abcdef0123456789abcdef'
+      APP_ADMIN_HOSTS: admin.emsl.test
+      DEFAULT_URI: http://localhost
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: eatmyshort_ci
+      DB_USERNAME: eatmyshort
+      DB_PASSWORD: ci-secret
+      DB_CHARSET: utf8mb4
+      MAILER_DSN: null://null
+      MAILER_FROM: 'EatMyShort.Link <noreply@localhost>'
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # 2.36.0
+        with:
+          php-version: '8.4'
+          extensions: intl, pdo_sqlite, pdo_mysql, sodium, gd
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      # Migrations must produce a schema that matches the mapping on this driver too.
+      - run: php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - run: php bin/console doctrine:schema:validate
+      - run: vendor/bin/phpunit
