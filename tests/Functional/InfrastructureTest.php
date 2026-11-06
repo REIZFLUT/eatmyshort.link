@@ -10,19 +10,39 @@ use App\Entity\Domain;
 use App\Entity\Link;
 use App\Entity\User;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpFoundation\Session\Storage\Handler\StrictSessionHandler;
 
 final class InfrastructureTest extends KernelTestCase
 {
-    public function testSqlitePragmas(): void
+    public function testConnectionIsConfiguredForTheDriver(): void
     {
         $connection = static::getContainer()->get(Connection::class);
 
-        self::assertSame('wal', strtolower((string) $connection->fetchOne('PRAGMA journal_mode')));
-        self::assertSame(1, (int) $connection->fetchOne('PRAGMA foreign_keys'));
+        if ($connection->getDatabasePlatform() instanceof SQLitePlatform) {
+            // The SQLite pragma middleware is the only session configuration the app applies.
+            self::assertSame('wal', strtolower((string) $connection->fetchOne('PRAGMA journal_mode')));
+            self::assertSame(1, (int) $connection->fetchOne('PRAGMA foreign_keys'));
+
+            return;
+        }
+
+        // MySQL/MariaDB: there is no pragma equivalent (foreign keys and the journal are engine
+        // features) and the SQLite pragma middleware must stay out of the way - a PRAGMA
+        // statement would be a syntax error here. What the application relies on instead is a
+        // usable session that speaks utf8mb4 (hostnames, target URLs and titles are utf8mb4).
+        self::assertInstanceOf(AbstractMySQLPlatform::class, $connection->getDatabasePlatform());
+        self::assertSame(1, (int) $connection->fetchOne('SELECT 1'));
+        self::assertSame(
+            'utf8mb4',
+            strtolower((string) $connection->fetchOne('SELECT @@character_set_client')),
+            'the connection charset must match the utf8mb4 schema',
+        );
     }
 
     public function testSessionFilesLiveInProjectDirectory(): void
@@ -84,8 +104,27 @@ final class InfrastructureTest extends KernelTestCase
 
     public function testBackupCommand(): void
     {
-        $target = sys_get_temp_dir().'/emsl-backup-'.bin2hex(random_bytes(4)).'.sqlite';
+        $connection = static::getContainer()->get(Connection::class);
         $tester = $this->command('app:db:backup');
+        $target = sys_get_temp_dir().'/emsl-backup-'.bin2hex(random_bytes(4)).'.sqlite';
+
+        if (!$connection->getDatabasePlatform() instanceof SQLitePlatform) {
+            // app:db:backup is SQLite-only (VACUUM INTO). On MariaDB/MySQL it must fail loudly and
+            // point at the database's own tools instead of writing an unusable file.
+            try {
+                $tester->execute(['target' => $target]);
+                self::assertSame(Command::FAILURE, $tester->getStatusCode());
+                self::assertStringContainsString('Only SQLite databases can be backed up', $tester->getDisplay());
+                self::assertFileDoesNotExist($target, 'a failed backup must not leave a file behind');
+            } finally {
+                if (is_file($target)) {
+                    unlink($target);
+                }
+            }
+
+            return;
+        }
+
         try {
             $tester->execute(['target' => $target]);
             $tester->assertCommandIsSuccessful();
