@@ -39,6 +39,9 @@ its job.
   SSRF guard so the server never calls private addresses).
 - QR codes (SVG/PNG), CSV export, expiry date, active toggle, 301/302/307/308.
 - **REST API** with personal tokens ([docs/API.md](docs/API.md)).
+- **Plugins** – typed events instead of patched core files: rewrite redirect targets, veto
+  clicks, reject links with a visible message, extend API payloads and the admin UI
+  ([docs/EXTENDING.md](docs/EXTENDING.md)).
 - Interface in German and English, light/dark, usable on mobile, custom logo and accent colour
   (default: Simpsons yellow `#fed90f`; text and font colours are calculated for WCAG contrast,
   the favicon picks up the colour).
@@ -78,6 +81,21 @@ Security and privacy are architecture decisions in this project, not features ad
   by default, title fetching is guarded against SSRF, and secrets live in `.env` outside the
   web root — never in the repository.
 
+## Extensions
+
+The core is not the end of the road: plugins hook into typed events instead of patching the
+application. A plugin is a directory under `plugins/`, enabled by name in
+`config/plugins.yaml` — no Composer package, no forked core. It can change redirect targets,
+veto clicks, reject links with a user-visible message, suggest short codes, add fields to API
+responses and contribute dashboard cards and admin navigation entries.
+
+Two working examples ship with the app, both disabled by default: `utm-tagging` (adds campaign
+parameters to outgoing targets) and `click-webhook` (posts every stored click, signed, to an
+M2M endpoint).
+
+The full contract — event catalogue, veto/reject semantics, stability promise, security notes —
+is in **[docs/EXTENDING.md](docs/EXTENDING.md)**.
+
 ## Installation
 
 See **[docs/INSTALL.md](docs/INSTALL.md)** (PHP 8.4, nginx or Apache, SQLite).
@@ -102,6 +120,8 @@ php bin/console app:domain:add go.company.com --default
 | `app:admin-ip [list\|allow\|remove\|clear] [cidr] [label]` | Manage the IP restriction for `/admin` (emergency access) |
 | `app:clicks:prune [--days=N]` | Delete old clicks (cron) |
 | `app:db:backup [target]` | Consistent copy of the SQLite database |
+| `app:plugin:list` | List whitelisted plugins and whether they are loaded |
+| `app:plugin:validate` | Check the plugin whitelist and every plugin directory (exit 1 on errors) |
 
 ## Development
 

@@ -39,6 +39,9 @@ Aufgabe erledigt.
   Server nie private Adressen aufruft).
 - QR-Codes (SVG/PNG), CSV-Export, Ablaufdatum, Aktiv-Schalter, 301/302/307/308.
 - **REST-API** mit persönlichen Tokens ([docs/API.md](docs/API.md)).
+- **Plugins** – typisierte Events statt Eingriffen in den Kern: Weiterleitungsziele umschreiben,
+  Klicks ablehnen, Links mit sichtbarer Meldung zurückweisen, API-Antworten und Admin-Oberfläche
+  erweitern ([docs/EXTENDING.md](docs/EXTENDING.md)).
 - Oberfläche auf Deutsch und Englisch, hell/dunkel, mobil nutzbar, eigenes Logo und Akzentfarbe
   (Standard: Simpsons-Gelb `#fed90f`; Schrift- und Textfarben werden für Kontrast nach WCAG berechnet,
   das Favicon übernimmt die Farbe).
@@ -79,6 +82,21 @@ Sicherheit und Datenschutz sind hier Architekturentscheidungen, keine nachträgl
   escaped standardmäßig, das Holen von Seitentiteln ist gegen SSRF geschützt, und Zugangsdaten
   liegen in einer `.env` außerhalb des Webroots – nie im Repository.
 
+## Erweiterungen
+
+Der Kern ist nicht das Ende: Plugins hängen sich an typisierte Events, statt die Anwendung zu
+patchen. Ein Plugin ist ein Verzeichnis unter `plugins/`, per Name in `config/plugins.yaml`
+freigeschaltet – kein Composer-Paket, kein geforkter Kern. Es kann Weiterleitungsziele ändern,
+Klicks ablehnen, Links mit sichtbarer Meldung zurückweisen, Kürzel vorschlagen, API-Antworten um
+Felder ergänzen und Dashboard-Karten sowie Admin-Navigation beisteuern.
+
+Zwei lauffähige Beispiele liegen bei, beide standardmäßig deaktiviert: `utm-tagging` (hängt
+Kampagnen-Parameter an ausgehende Ziele) und `click-webhook` (meldet jeden gespeicherten Klick
+signiert an einen M2M-Endpunkt).
+
+Der vollständige Vertrag – Event-Katalog, Veto-/Ablehnungs-Semantik, Stabilitätszusage,
+Sicherheitshinweise – steht in **[docs/EXTENDING.md](docs/EXTENDING.md)**.
+
 ## Installation
 
 Siehe **[docs/INSTALL.md](docs/INSTALL.md)** (PHP 8.4, nginx oder Apache, SQLite).
@@ -103,6 +121,8 @@ php bin/console app:domain:add go.firma.de --default
 | `app:admin-ip [list\|allow\|remove\|clear] [cidr] [label]` | IP-Sperre für `/admin` verwalten (Notfallzugang) |
 | `app:clicks:prune [--days=N]` | alte Klicks löschen (Cron) |
 | `app:db:backup [ziel]` | konsistente Kopie der SQLite-Datenbank |
+| `app:plugin:list` | freigeschaltete Plugins und ob sie geladen sind |
+| `app:plugin:validate` | Whitelist und alle Plugin-Verzeichnisse prüfen (Exit 1 bei Fehlern) |
 
 ## Entwicklung
 

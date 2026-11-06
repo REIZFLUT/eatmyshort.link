@@ -35,6 +35,7 @@ jobs:
       - run: php bin/console lint:yaml config/
       - run: php bin/console lint:container
       - run: php bin/console doctrine:schema:validate --skip-sync
+      - run: php bin/console app:plugin:validate
       - run: vendor/bin/phpunit
       - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
       - run: vendor/bin/php-cs-fixer fix --dry-run --diff
