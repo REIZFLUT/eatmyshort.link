@@ -15,6 +15,10 @@
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
+        <!-- Plugin system: point the app at the test fixtures instead of plugins/ so the
+             suite can prove a plugin is really loaded (see tests/Fixtures/plugins/). -->
+        <server name="APP_PLUGIN_DIR" value="tests/Fixtures/plugins" force="true" />
+        <server name="APP_PLUGIN_CONFIG" value="tests/Fixtures/plugins.yaml" force="true" />
     </php>
 
     <testsuites>

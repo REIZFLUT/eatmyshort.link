@@ -10,6 +10,14 @@ services:
     App\:
         resource: '../src/'
 
+    # The plugin paths come from APP_PLUGIN_DIR / APP_PLUGIN_CONFIG at runtime and cannot be
+    # autowired, so the registry is built by a factory from the project directory. Resolving
+    # the environment here (not in a container parameter) keeps the compiled container
+    # independent of where the plugins live.
+    App\Plugin\PluginRegistry:
+        factory: ['App\Plugin\PluginRegistry', 'forProject']
+        arguments: ['%kernel.project_dir%']
+
 when@test:
     services:
         # The http_client mock_response_factory references this id; tests/ is not part of

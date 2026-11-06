@@ -1,0 +1,4 @@
+off_plugin:
+    path: /__off/plugin
+    controller: Plugin\Off\OffController::index
+    methods: [GET]

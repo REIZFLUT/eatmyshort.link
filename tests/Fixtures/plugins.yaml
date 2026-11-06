@@ -1,0 +1,16 @@
+# Fixture whitelist used by the test suite (phpunit.dist.xml sets APP_PLUGIN_CONFIG to this
+# file). The "probe" plugin is enabled only through the when@test merge - which is also what
+# exercises that merge - while "off" stays disabled everywhere. "unlisted" has a directory
+# on disk but no entry here, so it must be ignored and reported as a warning.
+plugins:
+    probe:
+        enabled: false
+        settings:
+            greeting: hello
+    off:
+        enabled: false
+
+when@test:
+    plugins:
+        probe:
+            enabled: true

@@ -1,0 +1,5 @@
+name: off
+version: 0.9.0
+description: Test fixture for a disabled plugin; it must register neither a service nor a route.
+requires:
+    api: '>=1.0'
