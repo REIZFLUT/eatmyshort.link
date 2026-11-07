@@ -1,6 +1,15 @@
 {% extends 'base.html.twig' %}
 
+{% import '_macros.html.twig' as ui %}
+
 {% block title %}{{ 'profile.tab_api'|trans }}{% endblock %}
+
+{% block breadcrumbs %}
+    {{ ui.breadcrumbs([
+        {label: 'nav.profile'|trans, url: path('app_profile')},
+        {label: 'profile.tab_api'|trans},
+    ]) }}
+{% endblock %}
 
 {% block content %}
     <div class="page-head">

@@ -1,13 +1,21 @@
 {% extends 'base.html.twig' %}
 
+{% import '_macros.html.twig' as ui %}
+
 {% block title %}{{ domain.id ? domain.displayName : 'domains.new'|trans }}{% endblock %}
 
+{% block breadcrumbs %}
+    {{ ui.breadcrumbs([
+        {label: 'nav.domains'|trans, url: path('app_admin_domains')},
+        {label: domain.id ? domain.displayName : 'domains.new'|trans},
+    ]) }}
+{% endblock %}
+
 {% block content %}
-    <div class="narrow">
-        <div class="page-head">
-            <h1>{{ domain.id ? domain.displayName : 'domains.new'|trans }}</h1>
-            <a class="btn btn-ghost" href="{{ path('app_admin_domains') }}">← {{ 'nav.domains'|trans }}</a>
-        </div>
+    <div class="page-head">
+        <h1>{{ domain.id ? domain.displayName : 'domains.new'|trans }}</h1>
+    </div>
+    <div class="layout-aside">
         {{ form_start(form) }}
             <div class="card">
                 {{ form_widget(form) }}
@@ -18,6 +26,7 @@
         {{ form_end(form) }}
 
         {% if domain.id %}
+        <div>
             <div class="card danger">
                 <h2>{{ 'domains.delete'|trans }}</h2>
                 <p class="small muted">{{ 'domains.delete_text'|trans }}</p>
@@ -26,6 +35,7 @@
                     <button class="btn btn-danger">{{ 'domains.delete'|trans }}</button>
                 </form>
             </div>
+        </div>
         {% endif %}
     </div>
 {% endblock %}

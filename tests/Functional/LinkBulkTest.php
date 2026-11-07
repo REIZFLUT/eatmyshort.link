@@ -63,6 +63,70 @@ final class LinkBulkTest extends AppTestCase
         self::assertStringContainsString('sort=code', $href, 'the link column sorts by code');
     }
 
+    // --- Status filter ---------------------------------------------------
+
+    public function testStatusFilterShowsOnlyMatchingLinks(): void
+    {
+        $user = $this->createUser('user@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $this->createLink($user, $domain, 'laeuft');
+        $this->createLink($user, $domain, 'aus')->setActive(false);
+        $this->createLink($user, $domain, 'vorbei')->setExpiresAt(new \DateTimeImmutable('-1 day'));
+        $this->createLink($user, $domain, 'bald')->setExpiresAt(new \DateTimeImmutable('+1 day'));
+        $this->em()->flush();
+        $this->client->loginUser($user);
+
+        $this->client->request('GET', '/links?status=live&sort=code&dir=asc');
+        self::assertSame(['bald', 'laeuft'], $this->codes($this->client->getCrawler()));
+
+        $this->client->request('GET', '/links?status=inactive');
+        self::assertSame(['aus'], $this->codes($this->client->getCrawler()));
+
+        $this->client->request('GET', '/links?status=expired');
+        self::assertSame(['vorbei'], $this->codes($this->client->getCrawler()));
+
+        $crawler = $this->client->request('GET', '/links?status=kaputt');
+        self::assertCount(4, $this->codes($crawler), 'an unknown status means all links');
+        self::assertSelectorTextContains('.segmented a.active', 'Alle');
+    }
+
+    public function testLinksOnAnInactiveDomainAreNotLive(): void
+    {
+        $user = $this->createUser('user@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $this->createLink($user, $domain, 'still');
+        $domain->setActive(false);
+        $this->em()->flush();
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/links?status=live');
+        self::assertSame([], $this->codes($crawler));
+        self::assertSelectorExists('.empty a[href="/links"]', 'the empty result offers to reset the filters');
+    }
+
+    public function testSortHeadersAndBulkKeepTheStatusFilter(): void
+    {
+        $user = $this->createUser('user@example.com');
+        $domain = $this->createDomain('go.example.com', $user);
+        $link = $this->createLink($user, $domain, 'aus');
+        $link->setActive(false);
+        $this->em()->flush();
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/links?status=inactive');
+        self::assertStringContainsString('status=inactive', (string) $crawler->filter('th a.sort-link')->first()->attr('href'));
+        $token = (string) $crawler->filter('#bulk-form input[name="_token"]')->attr('value');
+        self::assertSame('inactive', $crawler->filter('#bulk-form input[name="return[status]"]')->attr('value'));
+
+        $this->client->request('POST', '/links/bulk', [
+            '_token' => $token,
+            'action' => 'activate',
+            'ids' => [(string) $link->getId()],
+            'return' => ['status' => 'inactive'],
+        ], server: ['HTTP_ORIGIN' => 'http://'.self::ADMIN_HOST]);
+        self::assertResponseRedirects('/links?status=inactive');
+    }
+
     // --- Bulk actions ----------------------------------------------------
 
     public function testBulkDeactivateSkipsForeignLinks(): void

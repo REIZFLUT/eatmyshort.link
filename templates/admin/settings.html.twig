@@ -3,10 +3,10 @@
 {% block title %}{{ 'nav.settings'|trans }}{% endblock %}
 
 {% block content %}
-    <div class="narrow">
-        <div class="page-head"><h1>{{ 'nav.settings'|trans }}</h1></div>
-        {{ form_start(form) }}
-            {{ form_errors(form) }}
+    <div class="page-head"><h1>{{ 'nav.settings'|trans }}</h1></div>
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+        <div class="grid grid-2">
             <div class="card">
                 <h2>{{ 'settings.branding'|trans }}</h2>
                 {{ form_row(form.title) }}
@@ -35,8 +35,8 @@
                 <h2>{{ 'settings.security'|trans }}</h2>
                 {{ form_row(form.require2faAdmins) }}
             </div>
-            {{ form_rest(form) }}
-            <div class="form-actions"><button class="btn btn-primary">{{ 'action.save'|trans }}</button></div>
-        {{ form_end(form) }}
-    </div>
+        </div>
+        {{ form_rest(form) }}
+        <div class="form-actions sticky-actions"><button class="btn btn-primary">{{ 'action.save'|trans }}</button></div>
+    {{ form_end(form) }}
 {% endblock %}

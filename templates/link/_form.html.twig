@@ -1,50 +1,62 @@
+{#
+    One form, two columns on wide screens: what the link is (left) and how it behaves plus the
+    submit buttons (right, sticky). Below 1100px the columns stack in reading order.
+#}
 {{ form_start(form, {attr: {novalidate: 'novalidate'}}) }}
     {{ form_errors(form) }}
-    <div class="card">
-        {{ form_row(form.targetUrl) }}
-        <div class="form-row">
-            {{ form_row(form.domain) }}
-            {{ form_row(form.code) }}
-        </div>
-        {% if form.title is defined %}
-            {{ form_row(form.title) }}
-        {% endif %}
-    </div>
-
-    {% if form.redirectType is defined %}
-        <div class="card">
-            <h2>{{ 'link.options'|trans }}</h2>
-            <div class="form-row">
-                {{ form_row(form.redirectType) }}
-                {{ form_row(form.expiresAt) }}
+    <div class="layout-aside">
+        <div>
+            <div class="card">
+                {{ form_row(form.targetUrl) }}
+                <div class="form-row">
+                    {{ form_row(form.domain) }}
+                    {{ form_row(form.code) }}
+                </div>
+                {% if form.title is defined %}
+                    {{ form_row(form.title) }}
+                {% endif %}
             </div>
-            {{ form_row(form.active) }}
+
+            {% if form.localisations is defined %}
+                <div class="card">
+                    <h2>{{ 'link.localisations'|trans }}</h2>
+                    <p class="small muted">{{ 'link.localisations_help'|trans }}</p>
+                    <div id="localisations"
+                         data-prototype="{{ include('link/_localisation_row.html.twig', {row: form.localisations.vars.prototype})|e('html_attr') }}"
+                         data-index="{{ form.localisations|length > 0 ? form.localisations|last.vars.name + 1 : 0 }}">
+                        {% for row in form.localisations %}
+                            {{ include('link/_localisation_row.html.twig', {row: row}) }}
+                        {% endfor %}
+                    </div>
+                    {{ form_errors(form.localisations) }}
+                    <button type="button" class="btn btn-sm" data-collection-add="#localisations">+ {{ 'link.add_localisation'|trans }}</button>
+                    <datalist id="language-suggestions">
+                        {% for code in ['de', 'en', 'fr', 'es', 'it', 'nl', 'pl', 'pt', 'cs', 'da', 'sv', 'tr', 'de-at', 'de-ch', 'en-us', 'en-gb'] %}
+                            <option value="{{ code }}">{{ code|language_name(app.request.locale) }}</option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+                {% do form.localisations.setRendered %}
+            {% endif %}
         </div>
 
-        <div class="card">
-            <h2>{{ 'link.localisations'|trans }}</h2>
-            <p class="small muted">{{ 'link.localisations_help'|trans }}</p>
-            <div id="localisations"
-                 data-prototype="{{ include('link/_localisation_row.html.twig', {row: form.localisations.vars.prototype})|e('html_attr') }}"
-                 data-index="{{ form.localisations|length > 0 ? form.localisations|last.vars.name + 1 : 0 }}">
-                {% for row in form.localisations %}
-                    {{ include('link/_localisation_row.html.twig', {row: row}) }}
-                {% endfor %}
+        <div class="aside-sticky">
+            {% if form.redirectType is defined %}
+                <div class="card">
+                    <h2>{{ 'link.options'|trans }}</h2>
+                    {{ form_row(form.redirectType) }}
+                    {{ form_row(form.expiresAt) }}
+                    {{ form_row(form.active) }}
+                </div>
+            {% endif %}
+
+            {{ form_rest(form) }}
+            <div class="card">
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">{{ submit_label|trans }}</button>
+                    <a class="btn btn-ghost" href="{{ cancel_url }}">{{ 'action.cancel'|trans }}</a>
+                </div>
             </div>
-            {{ form_errors(form.localisations) }}
-            <button type="button" class="btn btn-sm" data-collection-add="#localisations">+ {{ 'link.add_localisation'|trans }}</button>
-            <datalist id="language-suggestions">
-                {% for code in ['de', 'en', 'fr', 'es', 'it', 'nl', 'pl', 'pt', 'cs', 'da', 'sv', 'tr', 'de-at', 'de-ch', 'en-us', 'en-gb'] %}
-                    <option value="{{ code }}">{{ code|language_name(app.request.locale) }}</option>
-                {% endfor %}
-            </datalist>
         </div>
-        {% do form.localisations.setRendered %}
-    {% endif %}
-
-    {{ form_rest(form) }}
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">{{ submit_label|trans }}</button>
-        <a class="btn btn-ghost" href="{{ cancel_url }}">{{ 'action.cancel'|trans }}</a>
     </div>
 {{ form_end(form) }}

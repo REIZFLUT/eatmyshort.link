@@ -1,23 +1,33 @@
 {% extends 'base.html.twig' %}
 
+{% import '_macros.html.twig' as ui %}
+
 {% block title %}{{ 'nav.links'|trans }}{% endblock %}
 
 {% block content %}
+    {# Current filters, without sort: reused by the sort headers, status tabs and reset links. #}
     {% set query = {} %}
     {% if search %}{% set query = query|merge({q: search}) %}{% endif %}
     {% if domain %}{% set query = query|merge({domain: domain.id}) %}{% endif %}
     {% if only_own and is_admin() %}{% set query = query|merge({mine: 1}) %}{% endif %}
+    {% if status %}{% set query = query|merge({status: status}) %}{% endif %}
+    {% set sort_query = sort != 'created' or dir != 'desc' ? {sort: sort, dir: dir} : {} %}
+    {% set filtered = search or domain or status %}
 
     <div class="page-head">
         <div>
             <h1>{{ 'nav.links'|trans }}</h1>
             <p class="sub">{{ 'links.count'|trans({'%count%': total}) }}</p>
         </div>
-        <a class="btn btn-primary" href="{{ path('app_link_new') }}">{{ 'links.new'|trans }}</a>
     </div>
 
     <form class="filters" method="get" role="search">
-        <input type="search" name="q" value="{{ search }}" placeholder="{{ 'links.search'|trans }}" aria-label="{{ 'links.search'|trans }}">
+        <div class="search-field">
+            <input type="search" name="q" value="{{ search }}" placeholder="{{ 'links.search'|trans }}" aria-label="{{ 'links.search'|trans }}">
+            {% if search %}
+                <a class="btn btn-ghost btn-icon btn-sm search-reset" href="{{ path('app_links', query|filter((v, k) => k != 'q')|merge(sort_query)) }}" aria-label="{{ 'links.clear_search'|trans }}" title="{{ 'links.clear_search'|trans }}">{{ ui.icon('x') }}</a>
+            {% endif %}
+        </div>
         {% if domains|length > 1 %}
             <select name="domain" data-autosubmit aria-label="{{ 'link.domain'|trans }}">
                 <option value="">{{ 'links.all_domains'|trans }}</option>
@@ -29,20 +39,58 @@
         {% if is_admin() %}
             <label class="check" for="mine"><input type="checkbox" id="mine" name="mine" value="1" data-autosubmit {{ only_own ? 'checked' }}> {{ 'links.only_mine'|trans }}</label>
         {% endif %}
-        {% if sort != 'created' or dir != 'desc' %}<input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="dir" value="{{ dir }}">{% endif %}
+        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+        {% if sort_query is not empty %}<input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="dir" value="{{ dir }}">{% endif %}
         <button type="submit" class="btn">{{ 'action.search'|trans }}</button>
     </form>
 
+    <div class="result-line">
+        <nav class="segmented" aria-label="{{ 'links.status.label'|trans }}">
+            {% set base = query|filter((v, k) => k != 'status')|merge(sort_query) %}
+            <a href="{{ path('app_links', base) }}" class="{{ status is null ? 'active' }}"{% if status is null %} aria-current="page"{% endif %}>{{ 'links.status.all'|trans }}</a>
+            {% for s in statuses %}
+                <a href="{{ path('app_links', base|merge({status: s})) }}" class="{{ status == s ? 'active' }}"{% if status == s %} aria-current="page"{% endif %}>{{ ('links.status.' ~ s)|trans }}</a>
+            {% endfor %}
+        </nav>
+        {% if filtered %}
+            <span class="small muted">
+                {{ 'links.filtered'|trans }}
+                <a href="{{ path('app_links', (is_admin() and only_own ? {mine: 1} : {})|merge(sort_query)) }}">{{ 'links.reset_filters'|trans }}</a>
+            </span>
+        {% endif %}
+    </div>
+
+    <div class="card flush">
+        {% if links|length == 0 %}
+            <div class="empty">
+                {% if filtered %}
+                    <h2>{{ 'links.no_results'|trans }}</h2>
+                    <p>{{ 'links.no_results_text'|trans }}</p>
+                    <a class="btn" href="{{ path('app_links', is_admin() and only_own ? {mine: 1} : {}) }}">{{ 'links.reset_filters'|trans }}</a>
+                {% else %}
+                    <h2>{{ 'links.empty_title'|trans }}</h2>
+                    <p>{{ 'links.empty'|trans }}</p>
+                    <a class="btn btn-primary" href="{{ path('app_link_new') }}">{{ ui.icon('plus') }}{{ 'links.empty_cta'|trans }}</a>
+                {% endif %}
+            </div>
+        {% else %}
+            {{ include('link/_table.html.twig', {links: links, show_owner: is_admin() and not only_own, sort: sort, dir: dir, query: query, bulk: true}) }}
+        {% endif %}
+    </div>
+
     {% if links|length > 0 %}
-        <form id="bulk-form" method="post" action="{{ path('app_links_bulk') }}" class="actions bulk-bar">
+        {# After the table: as a sticky bar it then sits at the bottom of the viewport while the list scrolls. #}
+        <form id="bulk-form" method="post" action="{{ path('app_links_bulk') }}" class="actions bulk-bar" data-bulk-bar>
             <input type="hidden" name="_token" value="{{ csrf_token('links-bulk') }}">
             <input type="hidden" name="return[q]" value="{{ search }}">
             <input type="hidden" name="return[domain]" value="{{ domain ? domain.id : '' }}">
             {% if is_admin() %}<input type="hidden" name="return[mine]" value="{{ only_own ? '1' : '' }}">{% endif %}
+            <input type="hidden" name="return[status]" value="{{ status }}">
             <input type="hidden" name="return[sort]" value="{{ sort }}">
             <input type="hidden" name="return[dir]" value="{{ dir }}">
             {% if page > 1 %}<input type="hidden" name="return[page]" value="{{ page }}">{% endif %}
 
+            <span class="bulk-count" data-bulk-count data-template="{{ 'bulk.selected'|trans({'%count%': '__count__'}) }}" aria-live="polite">{{ 'bulk.label'|trans }}</span>
             <button type="submit" class="btn btn-sm" name="action" value="activate">{{ 'bulk.activate'|trans }}</button>
             <button type="submit" class="btn btn-sm" name="action" value="deactivate">{{ 'bulk.deactivate'|trans }}</button>
             {% if move_domains|length > 0 %}
@@ -52,11 +100,9 @@
                 <button type="submit" class="btn btn-sm" name="action" value="move">{{ 'bulk.move'|trans }}</button>
             {% endif %}
             <button type="submit" class="btn btn-sm btn-danger" name="action" value="delete" data-confirm="{{ 'bulk.delete_confirm'|trans }}">{{ 'bulk.delete'|trans }}</button>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-sm btn-ghost" data-bulk-clear hidden>{{ 'bulk.clear'|trans }}</button>
         </form>
     {% endif %}
-
-    <div class="card flush">
-        {{ include('link/_table.html.twig', {links: links, show_owner: is_admin() and not only_own, sort: sort, dir: dir, query: query, bulk: true}) }}
-    </div>
     {{ include('_partials/pagination.html.twig') }}
 {% endblock %}

@@ -1,17 +1,28 @@
 {% extends 'base.html.twig' %}
 
+{% import '_macros.html.twig' as ui %}
+
 {% block title %}{{ 'links.edit'|trans }}{% endblock %}
 
-{% block content %}
-    <div class="narrow">
-        <div class="page-head">
-            <div>
-                <h1>{{ 'links.edit'|trans }}</h1>
-                <p class="sub mono">{{ link.shortUrl }}</p>
-            </div>
-        </div>
-        {{ include('link/_form.html.twig', {submit_label: 'action.save', cancel_url: path('app_link_show', {id: link.id})}) }}
+{% block breadcrumbs %}
+    {{ ui.breadcrumbs([
+        {label: 'nav.links'|trans, url: path('app_links')},
+        {label: link.domain.displayName ~ '/' ~ link.code, url: path('app_link_show', {id: link.id})},
+        {label: 'action.edit'|trans},
+    ]) }}
+{% endblock %}
 
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ 'links.edit'|trans }}</h1>
+            <p class="sub mono">{{ link.shortUrl }}</p>
+        </div>
+    </div>
+    {{ include('link/_form.html.twig', {submit_label: 'action.save', cancel_url: path('app_link_show', {id: link.id})}) }}
+
+    {# A separate form, so it sits below the edit form instead of inside its side column. #}
+    <div class="layout-aside">
         <div class="card danger">
             <h2>{{ 'links.delete'|trans }}</h2>
             <p class="muted small">{{ 'links.delete_text'|trans }}</p>

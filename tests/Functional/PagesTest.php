@@ -131,7 +131,45 @@ final class PagesTest extends AppTestCase
         $css = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('--accent:#ffff00;', $css);
         self::assertStringContainsString('--accent-ink:'.\App\Branding\AccentPalette::DARK_INK.';', $css);
-        self::assertStringNotContainsString('--accent-text:#ffff00;}'."\n@media", $css, 'yellow is not used as text on light surfaces');
+        // The first rule holds the light values.
+        $light = strstr($css, "\n", true);
+        self::assertIsString($light);
+        self::assertStringStartsWith(':root{', $light);
+        self::assertStringNotContainsString('--accent-text:#ffff00', $light, 'yellow is not used as text on light surfaces');
+        // Dark text colour for both an explicit choice and the system setting (unless light was chosen).
+        self::assertStringContainsString(':root[data-theme="dark"]{--accent-text:#ffff00;}', $css);
+        self::assertStringContainsString('@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--accent-text:#ffff00;}}', $css);
+    }
+
+    public function testSidebarGroupsAdminPointsAndMarksTheCurrentPage(): void
+    {
+        $this->client->loginUser($this->createUser('normal@example.com'));
+        $crawler = $this->client->request('GET', '/links');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('#sidebar nav.nav .nav-group'), 'no admin group for normal users');
+        self::assertSame('/links', $crawler->filter('#sidebar .nav-link[aria-current="page"]')->attr('href'));
+        self::assertSelectorExists('a.skip-link[href="#main"]');
+        self::assertSelectorExists('form.topbar-search[action="/links"] input[name="q"]');
+
+        $this->client->loginUser($this->createUser('root@example.com', admin: true));
+        $crawler = $this->client->request('GET', '/admin/settings');
+        self::assertCount(2, $crawler->filter('#sidebar nav.nav .nav-group'));
+        self::assertSame('/admin/settings', $crawler->filter('#sidebar .nav-link.active')->attr('href'));
+    }
+
+    public function testLinkPagesShowBreadcrumbs(): void
+    {
+        $user = $this->createUser('user@example.com');
+        $link = $this->createLink($user, $this->createDomain('go.example.com', $user), 'krumen');
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/links/'.$link->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        $items = $crawler->filter('nav.breadcrumbs li');
+        self::assertCount(3, $items);
+        self::assertSame('/links', $items->eq(0)->filter('a')->attr('href'));
+        self::assertSame('/links/'.$link->getId(), $items->eq(1)->filter('a')->attr('href'));
+        self::assertSame('page', $items->eq(2)->filter('span')->attr('aria-current'));
     }
 
     public function testRequireTwoFactorForAdminsRedirectsToSecurityPage(): void

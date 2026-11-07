@@ -1,17 +1,25 @@
 {% extends 'base.html.twig' %}
 
+{% import '_macros.html.twig' as ui %}
+
 {% block title %}{{ user.id ? user.displayName : 'users.new'|trans }}{% endblock %}
 
-{% block content %}
-    <div class="narrow">
-        <div class="page-head">
-            <div>
-                <h1>{{ user.id ? user.displayName : 'users.new'|trans }}</h1>
-                {% if user.id %}<p class="sub">{{ user.email }}</p>{% else %}<p class="sub">{{ 'users.new_hint'|trans }}</p>{% endif %}
-            </div>
-            <a class="btn btn-ghost" href="{{ path('app_admin_users') }}">← {{ 'nav.users'|trans }}</a>
-        </div>
+{% block breadcrumbs %}
+    {{ ui.breadcrumbs([
+        {label: 'nav.users'|trans, url: path('app_admin_users')},
+        {label: user.id ? user.displayName : 'users.new'|trans},
+    ]) }}
+{% endblock %}
 
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1>{{ user.id ? user.displayName : 'users.new'|trans }}</h1>
+            {% if user.id %}<p class="sub">{{ user.email }}</p>{% else %}<p class="sub">{{ 'users.new_hint'|trans }}</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="layout-aside">
         {{ form_start(form) }}
             <div class="card">
                 {{ form_errors(form) }}
@@ -30,6 +38,7 @@
         {{ form_end(form) }}
 
         {% if user.id %}
+        <div>
             <div class="card">
                 <h2>{{ 'users.access'|trans }}</h2>
                 <p class="small muted">{{ user.hasPassword ? 'users.send_reset_text'|trans : 'users.send_invite_text'|trans }}</p>
@@ -64,6 +73,7 @@
                     </form>
                 </div>
             {% endif %}
+        </div>
         {% endif %}
     </div>
 {% endblock %}

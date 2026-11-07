@@ -68,10 +68,13 @@ class LinkRepository extends ServiceEntityRepository
      * so callers that pass no sort (API, dashboard) keep the previous behaviour. A stable id
      * tie-breaker keeps pagination deterministic when the primary sort key ties.
      *
-     * @param string $sort one of created, clicks, last_click, target, code
-     * @param string $dir  asc or desc
+     * The status filter mirrors Link::isLive() and Link::isExpired(); unknown values mean "all".
+     *
+     * @param string      $sort   one of created, clicks, last_click, target, code
+     * @param string      $dir    asc or desc
+     * @param string|null $status live, inactive, expired or null for all
      */
-    public function searchQuery(User $user, ?string $search = null, ?Domain $domain = null, bool $onlyOwn = true, string $sort = 'created', string $dir = 'desc'): QueryBuilder
+    public function searchQuery(User $user, ?string $search = null, ?Domain $domain = null, bool $onlyOwn = true, string $sort = 'created', string $dir = 'desc', ?string $status = null): QueryBuilder
     {
         $field = self::SORT_FIELDS[$sort] ?? self::SORT_FIELDS['created'];
         $direction = 'asc' === mb_strtolower($dir) ? \SortDirection::Ascending : \SortDirection::Descending;
@@ -93,6 +96,14 @@ class LinkRepository extends ServiceEntityRepository
             $qb->andWhere('LOWER(l.code) LIKE :q OR LOWER(l.targetUrl) LIKE :q OR LOWER(l.title) LIKE :q')
                 ->setParameter('q', '%'.mb_strtolower(trim($search)).'%');
         }
+        match ($status) {
+            'live' => $qb->andWhere('l.active = true AND d.active = true AND (l.expiresAt IS NULL OR l.expiresAt > :now)')
+                ->setParameter('now', new \DateTimeImmutable()),
+            'inactive' => $qb->andWhere('l.active = false'),
+            'expired' => $qb->andWhere('l.expiresAt IS NOT NULL AND l.expiresAt <= :now')
+                ->setParameter('now', new \DateTimeImmutable()),
+            default => null,
+        };
 
         return $qb;
     }

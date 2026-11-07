@@ -9,6 +9,9 @@ action.remove: Entfernen
 action.revoke: Widerrufen
 action.save: Speichern
 action.search: Suchen
+action.dismiss: Schließen
+action.copy_link: '%link% kopieren'
+action.open_qr: QR-Code
 
 nav.main: Hauptnavigation
 footer.source: Quellcode auf GitHub
@@ -23,6 +26,21 @@ nav.settings: Einstellungen
 nav.import: Import
 nav.profile: Profil
 nav.logout: Abmelden
+nav.group_links: Links
+nav.group_admin: Administration
+nav.menu: Menü öffnen
+nav.close: Menü schließen
+nav.skip: Zum Inhalt springen
+nav.breadcrumbs: Brotkrumen
+
+search.placeholder: Links suchen …
+
+theme.label: Darstellung
+theme.system: Wie das System
+theme.light: Hell
+theme.dark: Dunkel
+
+toast.copied: 'Kopiert: %text%'
 
 locale.de: Deutsch
 locale.en: English
@@ -113,6 +131,18 @@ links.search: Kürzel, Ziel oder Titel suchen …
 links.all_domains: Alle Domains
 links.only_mine: Nur meine
 links.empty: Hier gibt es noch keine Links.
+links.empty_title: Noch keine Links
+links.empty_cta: Ersten Link anlegen
+links.no_results: Keine Treffer
+links.no_results_text: Kein Link passt zu diesen Filtern.
+links.filtered: Gefiltert.
+links.reset_filters: Filter zurücksetzen
+links.clear_search: Suche leeren
+links.status.label: Status
+links.status.all: Alle
+links.status.live: Aktiv
+links.status.inactive: Inaktiv
+links.status.expired: Abgelaufen
 links.export_csv: CSV-Export
 links.delete: Link löschen
 links.delete_text: Der Kurzlink funktioniert danach nicht mehr, die Statistik wird mit gelöscht. Zum vorübergehenden Abschalten lieber „Aktiv“ ausschalten.
@@ -123,6 +153,7 @@ links.col.clicks: Klicks
 links.col.created: Angelegt
 links.col.target: Ziel
 links.col.last_click: Letzter Klick
+links.col.actions: Aktionen
 
 link.target_url: Ziel-URL
 link.domain: Domain
@@ -149,6 +180,7 @@ link.short_url: Kurzlink
 link.qr: QR-Code
 link.last_click: Letzter Klick
 link.total_clicks: Klicks gesamt
+link.details: Details
 link.sort_asc: Aufsteigend sortieren
 link.sort_desc: Absteigend sortieren
 
@@ -160,6 +192,9 @@ bulk.delete: Löschen
 bulk.select_all: Alle auswählen
 bulk.select_link: 'Link %code% auswählen'
 bulk.delete_confirm: 'Ausgewählte Links endgültig löschen? Die Statistik wird mitgelöscht.'
+bulk.label: 'Auswahl:'
+bulk.selected: '%count% ausgewählt'
+bulk.clear: Auswahl aufheben
 bulk.none: 'Keine Links ausgewählt.'
 bulk.move_invalid: 'Ziel-Domain ist nicht aktiv oder dir nicht freigegeben.'
 bulk.result: '%changed% geändert, %denied% übersprungen (fehlende Rechte), %conflicts% wegen Kürzel-Konflikt übersprungen'

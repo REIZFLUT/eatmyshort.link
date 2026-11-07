@@ -21,10 +21,15 @@ final class BrandingController extends AbstractController
     {
         $palette = $settings->getAccentPalette();
         $css = \sprintf(
-            ":root{--accent:%s;--accent-ink:%s;--accent-text:%s;}\n@media (prefers-color-scheme: dark){:root{--accent-text:%s;}}\n",
+            // Dark: an explicit choice (data-theme, set by js/theme-init.js) or the system setting
+            // unless the user chose light - the same two selectors app.css uses for its tokens.
+            ":root{--accent:%s;--accent-ink:%s;--accent-text:%s;}\n"
+            .":root[data-theme=\"dark\"]{--accent-text:%s;}\n"
+            ."@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){--accent-text:%s;}}\n",
             $palette->accent,
             $palette->ink,
             $palette->textOnLight,
+            $palette->textOnDark,
             $palette->textOnDark,
         );
         $response = new Response($css, Response::HTTP_OK, ['Content-Type' => 'text/css; charset=utf-8']);

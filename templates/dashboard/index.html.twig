@@ -10,6 +10,7 @@
         </div>
     </div>
 
+    {# Plugin widgets must stay the last child of this stack (see AdminUiPluginHooksTest). #}
     <div class="stack">
         <section class="card">
             <h2>{{ 'dashboard.shorten'|trans }}</h2>
@@ -26,18 +27,22 @@
             {% endif %}
         </section>
 
-        <section>
-            <h2>{{ 'dashboard.your_clicks'|trans }}</h2>
-            {{ include('_partials/stats.html.twig', {stats: stats}) }}
-        </section>
+        <div class="dash-grid">
+            <section class="card flush">
+                <div class="card-head card-pad">
+                    <h2>{{ 'dashboard.recent'|trans }}</h2>
+                    <a href="{{ path('app_links', {mine: 1}) }}" class="btn btn-sm btn-ghost">{{ 'dashboard.all_links'|trans }} →</a>
+                </div>
+                {{ include('link/_table.html.twig', {links: recent, show_owner: false}) }}
+            </section>
 
-        <section class="card flush">
-            <div class="card-head card-pad">
-                <h2>{{ 'dashboard.recent'|trans }}</h2>
-                <a href="{{ path('app_links', {mine: 1}) }}" class="btn btn-sm btn-ghost">{{ 'dashboard.all_links'|trans }} →</a>
-            </div>
-            {{ include('link/_table.html.twig', {links: recent, show_owner: false}) }}
-        </section>
+            <section>
+                <h2>{{ 'dashboard.your_clicks'|trans }}</h2>
+                {{ include('_partials/stats.html.twig', {stats: stats, part: 'summary'}) }}
+            </section>
+        </div>
+
+        {{ include('_partials/stats.html.twig', {stats: stats, part: 'breakdowns'}) }}
 
         {% if widgets is not empty %}
             <section class="stats">

@@ -9,6 +9,9 @@ action.remove: Remove
 action.revoke: Revoke
 action.save: Save
 action.search: Search
+action.dismiss: Dismiss
+action.copy_link: 'Copy %link%'
+action.open_qr: QR code
 
 nav.main: Main navigation
 footer.source: Source code on GitHub
@@ -23,6 +26,21 @@ nav.settings: Settings
 nav.import: Import
 nav.profile: Profile
 nav.logout: Sign out
+nav.group_links: Links
+nav.group_admin: Administration
+nav.menu: Open menu
+nav.close: Close menu
+nav.skip: Skip to content
+nav.breadcrumbs: Breadcrumbs
+
+search.placeholder: Search links …
+
+theme.label: Appearance
+theme.system: Match system
+theme.light: Light
+theme.dark: Dark
+
+toast.copied: 'Copied: %text%'
 
 locale.de: Deutsch
 locale.en: English
@@ -113,6 +131,18 @@ links.search: Search code, target or title …
 links.all_domains: All domains
 links.only_mine: Only mine
 links.empty: No links here yet.
+links.empty_title: No links yet
+links.empty_cta: Create your first link
+links.no_results: No matches
+links.no_results_text: No link matches these filters.
+links.filtered: Filtered.
+links.reset_filters: Reset filters
+links.clear_search: Clear search
+links.status.label: Status
+links.status.all: All
+links.status.live: Active
+links.status.inactive: Inactive
+links.status.expired: Expired
 links.export_csv: CSV export
 links.delete: Delete link
 links.delete_text: The short link stops working and its statistics are deleted too. To pause it, switch off "Active" instead.
@@ -123,6 +153,7 @@ links.col.clicks: Clicks
 links.col.created: Created
 links.col.target: Target
 links.col.last_click: Last click
+links.col.actions: Actions
 
 link.target_url: Target URL
 link.domain: Domain
@@ -149,6 +180,7 @@ link.short_url: Short link
 link.qr: QR code
 link.last_click: Last click
 link.total_clicks: Total clicks
+link.details: Details
 link.sort_asc: Sort ascending
 link.sort_desc: Sort descending
 
@@ -160,6 +192,9 @@ bulk.delete: Delete
 bulk.select_all: Select all
 bulk.select_link: 'Select link %code%'
 bulk.delete_confirm: 'Delete the selected links for good? Their statistics are deleted too.'
+bulk.label: 'Selection:'
+bulk.selected: '%count% selected'
+bulk.clear: Clear selection
 bulk.none: 'No links selected.'
 bulk.move_invalid: 'Target domain is inactive or not assigned to you.'
 bulk.result: '%changed% changed, %denied% skipped (missing rights), %conflicts% skipped due to a code conflict'

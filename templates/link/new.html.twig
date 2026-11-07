@@ -1,10 +1,17 @@
 {% extends 'base.html.twig' %}
 
+{% import '_macros.html.twig' as ui %}
+
 {% block title %}{{ 'links.new'|trans }}{% endblock %}
 
+{% block breadcrumbs %}
+    {{ ui.breadcrumbs([
+        {label: 'nav.links'|trans, url: path('app_links')},
+        {label: 'links.new'|trans},
+    ]) }}
+{% endblock %}
+
 {% block content %}
-    <div class="narrow">
-        <div class="page-head"><h1>{{ 'links.new'|trans }}</h1></div>
-        {{ include('link/_form.html.twig', {submit_label: 'links.create', cancel_url: path('app_links')}) }}
-    </div>
+    <div class="page-head"><h1>{{ 'links.new'|trans }}</h1></div>
+    {{ include('link/_form.html.twig', {submit_label: 'links.create', cancel_url: path('app_links')}) }}
 {% endblock %}

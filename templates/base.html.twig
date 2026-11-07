@@ -5,68 +5,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>{% block title %}{% endblock %}{% if block('title') is not empty %} · {% endif %}{{ app_title() }}</title>
+    {# Classic, blocking script: sets data-theme before the first paint, so a stored theme never flashes. #}
+    <script src="{{ asset('js/theme-init.js') }}" nonce="{{ csp_nonce() }}"></script>
     <link rel="icon" href="{{ path('app_branding_favicon') }}" type="image/svg+xml">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     <link rel="stylesheet" href="{{ path('app_branding_css') }}">
     {% block importmap %}{{ importmap('app', {nonce: csp_nonce()}) }}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}" data-copy-prompt="{{ 'action.copy_manually'|trans }}">
+<body class="{% block body_class %}{% endblock %}" data-copy-prompt="{{ 'action.copy_manually'|trans }}" data-copied-toast="{{ 'toast.copied'|trans }}" data-dismiss-label="{{ 'action.dismiss'|trans }}">
 {% block body %}
+    {% import '_macros.html.twig' as ui %}
     {% set route = app.request.attributes.get('_route') ?? '' %}
-    <header class="topbar">
-        <div class="container">
-            <a class="brand" href="{{ path('app_dashboard') }}" title="{{ app_title() }}">
-                {% if has_custom_logo() %}
-                    <img src="{{ path('app_branding_logo') }}" alt="{{ app_title() }}">
-                {% else %}
-                    {{ include('_logo.svg.twig') }}
-                {% endif %}
-            </a>
-            <nav class="nav" aria-label="{{ 'nav.main'|trans }}">
-                <a href="{{ path('app_dashboard') }}" class="{{ route == 'app_dashboard' ? 'active' }}">{{ 'nav.dashboard'|trans }}</a>
-                <a href="{{ path('app_links') }}" class="{{ route starts with 'app_link' and route != 'app_tools_bookmarklet' ? 'active' }}">{{ 'nav.links'|trans }}</a>
-                <a href="{{ path('app_tools_bookmarklet') }}" class="{{ route == 'app_tools_bookmarklet' ? 'active' }}">{{ 'nav.tools'|trans }}</a>
+    {% set path_info = app.request.pathInfo %}
+    <a class="skip-link" href="#main">{{ 'nav.skip'|trans }}</a>
+
+    <div class="shell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-head">
+                <a class="brand" href="{{ path('app_dashboard') }}" title="{{ app_title() }}">
+                    {% if has_custom_logo() %}
+                        <img src="{{ path('app_branding_logo') }}" alt="{{ app_title() }}">
+                    {% else %}
+                        {{ include('_logo.svg.twig') }}
+                    {% endif %}
+                </a>
+                <button type="button" class="btn btn-ghost btn-icon sidebar-close" data-nav-close aria-label="{{ 'nav.close'|trans }}">{{ ui.icon('x') }}</button>
+            </div>
+
+            <nav class="nav sidebar-nav" aria-label="{{ 'nav.main'|trans }}">
+                <div class="nav-group">
+                    <div class="nav-heading">{{ 'nav.group_links'|trans }}</div>
+                    {{ ui.nav_item(path('app_dashboard'), 'nav.dashboard'|trans, 'home', route == 'app_dashboard') }}
+                    {{ ui.nav_item(path('app_links'), 'nav.links'|trans, 'link', route starts with 'app_link') }}
+                    {{ ui.nav_item(path('app_tools_bookmarklet'), 'nav.tools'|trans, 'bookmark', route starts with 'app_tools') }}
+                </div>
                 {% if is_admin() %}
-                    <span class="sep" aria-hidden="true"></span>
-                    <a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ 'nav.users'|trans }}</a>
-                    <a href="{{ path('app_admin_domains') }}" class="{{ route starts with 'app_admin_domain' ? 'active' }}">{{ 'nav.domains'|trans }}</a>
-                    <a href="{{ path('app_admin_stats') }}" class="{{ route == 'app_admin_stats' ? 'active' }}">{{ 'nav.stats'|trans }}</a>
-                    <a href="{{ path('app_admin_ip_rules') }}" class="{{ route starts with 'app_admin_ip' ? 'active' }}">{{ 'nav.ip_rules'|trans }}</a>
-                    <a href="{{ path('app_admin_import') }}" class="{{ route starts with 'app_admin_import' ? 'active' }}">{{ 'nav.import'|trans }}</a>
-                    <a href="{{ path('app_admin_settings') }}" class="{{ route == 'app_admin_settings' ? 'active' }}">{{ 'nav.settings'|trans }}</a>
-                    {# Plugin entries append after the built-in admin points; each plugin ships its own route and access control. #}
-                    {% for item in plugin_admin_nav() %}
-                        <a href="{{ item.url }}">{{ item.label }}</a>
-                    {% endfor %}
+                    <div class="nav-group">
+                        <div class="nav-heading">{{ 'nav.group_admin'|trans }}</div>
+                        {{ ui.nav_item(path('app_admin_users'), 'nav.users'|trans, 'users', route starts with 'app_admin_user') }}
+                        {{ ui.nav_item(path('app_admin_domains'), 'nav.domains'|trans, 'globe', route starts with 'app_admin_domain') }}
+                        {{ ui.nav_item(path('app_admin_stats'), 'nav.stats'|trans, 'chart', route == 'app_admin_stats') }}
+                        {{ ui.nav_item(path('app_admin_ip_rules'), 'nav.ip_rules'|trans, 'shield', route starts with 'app_admin_ip') }}
+                        {{ ui.nav_item(path('app_admin_import'), 'nav.import'|trans, 'upload', route starts with 'app_admin_import') }}
+                        {{ ui.nav_item(path('app_admin_settings'), 'nav.settings'|trans, 'sliders', route == 'app_admin_settings') }}
+                        {# Plugin entries append after the built-in admin points; each plugin ships its own route and access control. #}
+                        {% for item in plugin_admin_nav() %}
+                            {{ ui.nav_item(item.url, item.label, 'plugin', item.url starts with '/' and (path_info == item.url or path_info starts with item.url|trim('/', 'right') ~ '/')) }}
+                        {% endfor %}
+                    </div>
                 {% endif %}
             </nav>
-            <div class="usermenu">
-                <a href="{{ path('app_profile') }}" class="{{ route starts with 'app_profile' ? 'active' }}" title="{{ 'nav.profile'|trans }}">{{ app.user.displayName }}</a>
-                <form method="post" action="{{ path('app_logout') }}" class="inline-form">
-                    <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
-                    <button type="submit" class="btn btn-sm">{{ 'nav.logout'|trans }}</button>
+
+            {% set initials = app.user.displayName|split(' ')|filter(p => p is not empty)|slice(0, 2)|map(p => p|first)|join|upper %}
+            <details class="usermenu" data-usermenu>
+                <summary>
+                    <span class="avatar" aria-hidden="true">{{ initials ?: '?' }}</span>
+                    <span class="usermenu-who">
+                        <span class="usermenu-name">{{ app.user.displayName }}</span>
+                        <span class="usermenu-mail">{{ app.user.email }}</span>
+                    </span>
+                    {{ ui.icon('chevron', 'usermenu-chevron') }}
+                </summary>
+                <div class="usermenu-panel">
+                    {{ ui.nav_item(path('app_profile'), 'nav.profile'|trans, 'user', route == 'app_profile') }}
+                    {{ ui.nav_item(path('app_profile_security'), 'profile.tab_security'|trans, 'key', route starts with 'app_profile_security' or route starts with 'app_profile_totp') }}
+                    {{ ui.nav_item(path('app_profile_tokens'), 'profile.tab_api'|trans, 'code', route starts with 'app_profile_token') }}
+                    <div class="theme-switch" role="group" aria-label="{{ 'theme.label'|trans }}" data-theme-switch hidden>
+                        <button type="button" data-theme-choice="system" aria-pressed="false" title="{{ 'theme.system'|trans }}">{{ ui.icon('monitor') }}<span class="sr-only">{{ 'theme.system'|trans }}</span></button>
+                        <button type="button" data-theme-choice="light" aria-pressed="false" title="{{ 'theme.light'|trans }}">{{ ui.icon('sun') }}<span class="sr-only">{{ 'theme.light'|trans }}</span></button>
+                        <button type="button" data-theme-choice="dark" aria-pressed="false" title="{{ 'theme.dark'|trans }}">{{ ui.icon('moon') }}<span class="sr-only">{{ 'theme.dark'|trans }}</span></button>
+                    </div>
+                    <form method="post" action="{{ path('app_logout') }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
+                        <button type="submit" class="nav-link nav-button">{{ ui.icon('logout') }}<span>{{ 'nav.logout'|trans }}</span></button>
+                    </form>
+                </div>
+            </details>
+        </aside>
+        <div class="nav-backdrop" data-nav-close hidden></div>
+
+        <div class="shell-main">
+            <header class="topbar">
+                <div class="container topbar-inner">
+                <button type="button" class="btn btn-ghost btn-icon nav-toggle" data-nav-toggle aria-controls="sidebar" aria-expanded="false" aria-label="{{ 'nav.menu'|trans }}">{{ ui.icon('menu') }}</button>
+                <a class="brand topbar-brand" href="{{ path('app_dashboard') }}" title="{{ app_title() }}">
+                    {% if has_custom_logo() %}
+                        <img src="{{ path('app_branding_logo') }}" alt="{{ app_title() }}">
+                    {% else %}
+                        {{ include('_logo.svg.twig') }}
+                    {% endif %}
+                </a>
+                <form class="topbar-search" method="get" action="{{ path('app_links') }}" role="search">
+                    {{ ui.icon('search') }}
+                    <input type="search" name="q" value="{{ route == 'app_links' ? app.request.query.get('q') }}" placeholder="{{ 'search.placeholder'|trans }}" aria-label="{{ 'search.placeholder'|trans }}" aria-keyshortcuts="/" data-shortcut-search>
+                    <kbd aria-hidden="true">/</kbd>
                 </form>
-            </div>
-        </div>
-    </header>
+                <a class="btn btn-primary" href="{{ path('app_link_new') }}" aria-keyshortcuts="n" data-shortcut-new title="{{ 'links.new'|trans }} (N)">{{ ui.icon('plus') }}<span class="btn-label">{{ 'links.new'|trans }}</span></a>
+                </div>
+            </header>
 
-    <main>
-        <div class="container">
-            {{ include('_partials/flashes.html.twig') }}
-            {% block content %}{% endblock %}
-        </div>
-    </main>
+            <main id="main" tabindex="-1">
+                <div class="container">
+                    {% block breadcrumbs %}{% endblock %}
+                    {{ include('_partials/flashes.html.twig') }}
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
 
-    <footer class="site">
-        <div class="container">
-            <span>{{ app_title() }}</span>
-            <span>
-                <a href="https://github.com/REIZFLUT/eatmyshort.link" title="{{ 'footer.source'|trans }}" rel="noopener noreferrer" target="_blank">GitHub</a>
-                · GPL-3.0
-            </span>
+            <footer class="site">
+                <div class="container">
+                    <span>{{ app_title() }}</span>
+                    <span>
+                        <a href="https://github.com/REIZFLUT/eatmyshort.link" title="{{ 'footer.source'|trans }}" rel="noopener noreferrer" target="_blank">GitHub</a>
+                        · GPL-3.0
+                    </span>
+                </div>
+            </footer>
         </div>
-    </footer>
+    </div>
+
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 {% endblock %}
 </body>
 </html>

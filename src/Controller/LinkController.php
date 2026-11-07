@@ -48,6 +48,9 @@ final class LinkController extends AbstractController
     /** @var list<string> whitelisted sort directions; anything else falls back to desc */
     private const array DIRECTIONS = ['asc', 'desc'];
 
+    /** @var list<string> whitelisted status filters; anything else means "all" */
+    private const array STATUSES = ['live', 'inactive', 'expired'];
+
     /** @var list<string> whitelisted bulk actions */
     private const array BULK_ACTIONS = ['activate', 'deactivate', 'delete', 'move'];
 
@@ -72,8 +75,10 @@ final class LinkController extends AbstractController
         $sort = \in_array($sort, self::SORTS, true) ? $sort : 'created';
         $dir = (string) $request->query->get('dir', 'desc');
         $dir = \in_array($dir, self::DIRECTIONS, true) ? $dir : 'desc';
+        $status = (string) $request->query->get('status');
+        $status = \in_array($status, self::STATUSES, true) ? $status : null;
 
-        $query = $links->searchQuery($user, $search, $domain, $onlyOwn, $sort, $dir)
+        $query = $links->searchQuery($user, $search, $domain, $onlyOwn, $sort, $dir, $status)
             ->setFirstResult(($page - 1) * self::PER_PAGE)
             ->setMaxResults(self::PER_PAGE);
         $paginator = new Paginator($query, fetchJoinCollection: false);
@@ -88,6 +93,8 @@ final class LinkController extends AbstractController
             'only_own' => $onlyOwn,
             'sort' => $sort,
             'dir' => $dir,
+            'status' => $status,
+            'statuses' => self::STATUSES,
             'domains' => $isAdmin ? $this->domains->findAllOrdered() : $this->domains->findUsableBy($user, false),
             'move_domains' => $this->domains->findUsableBy($user, $isAdmin),
         ]);
@@ -434,6 +441,10 @@ final class LinkController extends AbstractController
         $dir = (string) ($return['dir'] ?? '');
         if (\in_array($dir, self::DIRECTIONS, true)) {
             $params['dir'] = $dir;
+        }
+        $status = (string) ($return['status'] ?? '');
+        if (\in_array($status, self::STATUSES, true)) {
+            $params['status'] = $status;
         }
         $page = (int) ($return['page'] ?? 1);
         if ($page > 1) {

@@ -1,0 +1,63 @@
+{#
+    Shared UI helpers. Import with {% import '_macros.html.twig' as ui %}.
+
+    Icons are inline SVG with presentation attributes only (no style attribute), so they pass
+    the strict Content-Security-Policy. They are decorative: the surrounding control carries the
+    accessible name.
+#}
+
+{% macro icon(name, class = '') %}
+    {%- set paths = {
+        home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M9.5 21v-6h5v6"/>',
+        link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.1 1.1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.1-1.1"/>',
+        bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
+        users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+        globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9s1.3-6.3 3.8-9z"/>',
+        chart: '<path d="M4 4v16h16"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/>',
+        shield: '<path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z"/>',
+        upload: '<path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+        sliders: '<path d="M4 6h9"/><path d="M17 6h3"/><circle cx="15" cy="6" r="2"/><path d="M4 12h3"/><path d="M11 12h9"/><circle cx="9" cy="12" r="2"/><path d="M4 18h11"/><path d="M19 18h1"/><circle cx="17" cy="18" r="2"/>',
+        plugin: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12h6"/><path d="M12 9v6"/>',
+        user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+        key: '<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2"/><path d="m17 6 3 3"/><path d="m14.5 8.5 2 2"/>',
+        code: '<path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/><path d="m14 5-4 14"/>',
+        logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="m10 17-5-5 5-5"/><path d="M5 12h11"/>',
+        search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+        plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+        menu: '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
+        x: '<path d="m6 6 12 12"/><path d="M18 6 6 18"/>',
+        copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15h-.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5"/>',
+        edit: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+        qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01"/><path d="M14 21v.01"/><path d="M17 21h4v-4"/>',
+        sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/>',
+        moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+        monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/>',
+        chevron: '<path d="m6 9 6 6 6-6"/>',
+        check: '<path d="m5 12 5 5 9-10"/>',
+        download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+    } -%}
+    <svg class="icon{{ class ? ' ' ~ class }}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ (paths[name] ?? paths.plugin)|raw }}</svg>
+{%- endmacro %}
+
+{% macro nav_item(url, label, icon, active = false) %}
+    <a href="{{ url }}" class="nav-link{{ active ? ' active' }}"{% if active %} aria-current="page"{% endif %}>{{ _self.icon(icon) }}<span>{{ label }}</span></a>
+{%- endmacro %}
+
+{#
+    items: list of {label, url}; the last item is the current page and is rendered without a link.
+#}
+{% macro breadcrumbs(items) %}
+    <nav class="breadcrumbs" aria-label="{{ 'nav.breadcrumbs'|trans }}">
+        <ol>
+            {% for item in items %}
+                <li>
+                    {%- if loop.last or item.url is not defined or item.url is null -%}
+                        <span{% if loop.last %} aria-current="page"{% endif %}>{{ item.label }}</span>
+                    {%- else -%}
+                        <a href="{{ item.url }}">{{ item.label }}</a>
+                    {%- endif -%}
+                </li>
+            {% endfor %}
+        </ol>
+    </nav>
+{%- endmacro %}

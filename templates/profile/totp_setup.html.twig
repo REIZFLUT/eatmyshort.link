@@ -1,6 +1,16 @@
 {% extends 'base.html.twig' %}
 
+{% import '_macros.html.twig' as ui %}
+
 {% block title %}{{ 'totp.enable'|trans }}{% endblock %}
+
+{% block breadcrumbs %}
+    {{ ui.breadcrumbs([
+        {label: 'nav.profile'|trans, url: path('app_profile')},
+        {label: 'profile.tab_security'|trans, url: path('app_profile_security')},
+        {label: 'totp.enable'|trans},
+    ]) }}
+{% endblock %}
 
 {% block content %}
     <div class="narrow">

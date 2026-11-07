@@ -1,5 +1,11 @@
-{# Expects: stats (StatsBuilder result), optional periods + route params for the period switch #}
+{#
+    Expects: stats (StatsBuilder result), optional periods + route params for the period switch.
+    Optional part: 'summary' (tiles + chart), 'breakdowns' (the breakdown cards) or both (default),
+    so wide layouts can place the two parts in different columns.
+#}
+{% set part = part|default('all') %}
 <div class="stack">
+    {% if part in ['all', 'summary'] %}
     <div class="stats">
         <div class="stat"><div class="value">{{ stats.totals.clicks|number_format(0, ',', '.') }}</div><div class="label">{{ 'stats.clicks'|trans }}</div></div>
         <div class="stat"><div class="value">{{ stats.totals.visitors|number_format(0, ',', '.') }}</div><div class="label">{{ 'stats.visitors'|trans }}</div></div>
@@ -20,6 +26,9 @@
         {{ bar_chart(stats.series, 'stats.per_day'|trans) }}
         <p class="small muted">{{ 'stats.chart_hint'|trans }}</p>
     </div>
+    {% endif %}
+
+    {% if part in ['all', 'breakdowns'] %}
 
     <div class="grid grid-3">
         {% for field, rows in stats.breakdowns %}
@@ -50,4 +59,5 @@
             </div>
         {% endfor %}
     </div>
+    {% endif %}
 </div>
