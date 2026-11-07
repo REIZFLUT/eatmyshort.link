@@ -81,6 +81,103 @@ final class PluginRegistry
     }
 
     /**
+     * {@see self::active()}, memoised in $cacheFile for the kernel's per-request boot.
+     *
+     * Resolving the whitelist parses YAML and checks Semver constraints - about 0.5 ms with no
+     * plugin enabled and more with every enabled one, paid on each request, redirects included.
+     * The result is stored together with a signature of everything it was derived from: the
+     * paths, the API version and a content hash of the whitelist and of every enabled
+     * plugin's manifest. A cached result is only used while that signature still
+     * matches, so editing, replacing or removing any of those files resolves afresh (and a
+     * broken plugin still stops the boot). The cache is a best-effort optimisation: a file
+     * that cannot be read or written is ignored.
+     *
+     * @return list<PluginMetadata>
+     *
+     * @throws PluginException when an enabled plugin is misconfigured
+     */
+    public function activeCached(string $environment, string $cacheFile): array
+    {
+        $cached = is_file($cacheFile) ? @file_get_contents($cacheFile) : false;
+        if (\is_string($cached)) {
+            $data = @unserialize($cached, ['allowed_classes' => false]);
+            if (\is_array($data) && isset($data['plugins'], $data['manifests']) && \is_array($data['plugins']) && \is_array($data['manifests'])) {
+                /** @var list<string> $manifests */
+                $manifests = $data['manifests'];
+                if (($data['signature'] ?? null) === $this->signature($environment, $manifests)) {
+                    $plugins = [];
+                    foreach ($data['plugins'] as $row) {
+                        if (!\is_array($row)) {
+                            $plugins = null;
+                            break;
+                        }
+                        $plugins[] = new PluginMetadata(...$row);
+                    }
+                    if (null !== $plugins) {
+                        return $plugins;
+                    }
+                }
+            }
+        }
+
+        $plugins = $this->active($environment);
+        $manifests = array_map(static fn (PluginMetadata $plugin): string => $plugin->directory.'/plugin.yaml', $plugins);
+
+        $payload = serialize([
+            'signature' => $this->signature($environment, $manifests),
+            'manifests' => $manifests,
+            'plugins' => array_map(static fn (PluginMetadata $plugin): array => [
+                'name' => $plugin->name,
+                'version' => $plugin->version,
+                'description' => $plugin->description,
+                'requiresApi' => $plugin->requiresApi,
+                'settings' => $plugin->settings,
+                'directory' => $plugin->directory,
+            ], $plugins),
+        ]);
+
+        $directory = \dirname($cacheFile);
+        if (is_dir($directory) || @mkdir($directory, 0o777, true) || is_dir($directory)) {
+            // Write and rename, so a concurrent boot never reads a half-written file.
+            $temporary = $cacheFile.'.'.bin2hex(random_bytes(4)).'.tmp';
+            if (false !== @file_put_contents($temporary, $payload) && !@rename($temporary, $cacheFile)) {
+                @unlink($temporary);
+            }
+        }
+
+        return $plugins;
+    }
+
+    /**
+     * @param list<string> $manifests
+     *
+     * @return array<string, mixed>
+     */
+    private function signature(string $environment, array $manifests): array
+    {
+        // A content hash, not mtime: two edits within the same second must not be mistaken
+        // for one. The files are small, xxh128 over them costs a few microseconds.
+        $stat = static function (string $file): ?string {
+            $hash = is_file($file) ? @hash_file('xxh128', $file) : false;
+
+            return false === $hash ? null : $hash;
+        };
+
+        $files = [];
+        foreach ($manifests as $manifest) {
+            $files[$manifest] = $stat($manifest);
+        }
+
+        return [
+            'environment' => $environment,
+            'api' => $this->apiVersion,
+            'plugin_dir' => $this->pluginDir,
+            'config' => [$this->config->file(), $stat($this->config->file())],
+            'manifests' => $files,
+        ];
+    }
+
+    /**
      * One row per whitelisted plugin for "app:plugin:list". Never throws: a plugin that is
      * enabled but broken is still shown, so the command stays usable for diagnosis.
      *

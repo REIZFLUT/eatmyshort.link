@@ -6,6 +6,7 @@ namespace App\Command;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -22,6 +23,10 @@ use Symfony\Component\Process\Process;
  * tools (--single-transaction), so a running app is not blocked and the dump is consistent
  * for InnoDB tables. Credentials are handed to the tool through MYSQL_PWD, never on the
  * command line, so they stay out of the process list.
+ *
+ * Every file is created under a 0077 umask, so the copy (password hashes, TOTP secrets, API
+ * token hashes) is never readable by other accounts - not even for the duration of the dump,
+ * which a chmod at the end could not prevent.
  */
 #[AsCommand(name: 'app:db:backup', description: 'Writes a consistent database backup: VACUUM INTO for SQLite, mariadb-dump/mysqldump for MySQL/MariaDB')]
 final readonly class DbBackupCommand
@@ -76,7 +81,7 @@ final readonly class DbBackupCommand
             return Command::FAILURE;
         }
         // Own connection: VACUUM is not allowed inside a transaction of the app connection.
-        new \PDO('sqlite:'.$source)->prepare('VACUUM INTO ?')->execute([$target]);
+        self::privately(static fn () => new \PDO('sqlite:'.$source)->prepare('VACUUM INTO ?')->execute([$target]));
 
         // The copy contains password hashes, TOTP secrets and API tokens: owner only.
         clearstatcache(true, $target);
@@ -124,6 +129,13 @@ final readonly class DbBackupCommand
         if ('' === $dumpTarget) {
             $dumpTarget = $target.'.sql';
         }
+        // The plain dump is an intermediate file that is deleted afterwards: never let it
+        // overwrite (and then remove) a file that happens to have that name.
+        if ($gzip && file_exists($dumpTarget)) {
+            $io->error("$dumpTarget already exists (used as the intermediate file for $target).");
+
+            return Command::FAILURE;
+        }
 
         $params = $this->connection->getParams();
         $database = $params['dbname'] ?? null;
@@ -133,12 +145,13 @@ final readonly class DbBackupCommand
             return Command::FAILURE;
         }
 
-        $process = new Process(array_merge([$tool], $this->dumpArguments($params, $database, $dumpTarget)));
+        $process = new Process(array_merge([$tool], $this->dumpArguments($params, $database, $dumpTarget, $this->needsColumnStatisticsOff($tool))));
         // The password goes through the environment, not the argument list, so it does not
         // show up in the process list (ps) or the shell history.
         $process->setEnv(['MYSQL_PWD' => (string) ($params['password'] ?? '')]);
         $process->setTimeout(null);
-        $process->run();
+        // The child inherits the umask, so the tool creates the dump owner-only from the start.
+        self::privately(static fn () => $process->run());
 
         if (!$process->isSuccessful()) {
             if (is_file($dumpTarget)) {
@@ -153,7 +166,7 @@ final readonly class DbBackupCommand
         }
 
         if ($gzip) {
-            if (!$this->gzip($dumpTarget, $target)) {
+            if (!self::privately(fn (): bool => $this->gzip($dumpTarget, $target))) {
                 unlink($dumpTarget);
                 $io->error(\sprintf('Cannot compress the dump to %s.', $target));
 
@@ -180,14 +193,21 @@ final readonly class DbBackupCommand
      *
      * @return list<string>
      */
-    private function dumpArguments(array $params, string $database, string $dumpTarget): array
+    private function dumpArguments(array $params, string $database, string $dumpTarget, bool $columnStatisticsOff): array
     {
         $arguments = [
             '--single-transaction',
             '--quick',
+            // MySQL 8 otherwise needs the PROCESS privilege for the tablespace section, which
+            // an application account normally lacks; the app does not use tablespaces.
+            '--no-tablespaces',
             '--default-character-set='.(\is_string($params['charset'] ?? null) ? $params['charset'] : 'utf8mb4'),
             '--result-file='.$dumpTarget,
         ];
+
+        if ($columnStatisticsOff) {
+            $arguments[] = '--column-statistics=0';
+        }
 
         $socket = $params['unix_socket'] ?? null;
         if (\is_string($socket) && '' !== $socket) {
@@ -208,6 +228,43 @@ final readonly class DbBackupCommand
         $arguments[] = $database;
 
         return $arguments;
+    }
+
+    /**
+     * MySQL's own mysqldump (8.0+) queries information_schema.COLUMN_STATISTICS, which MariaDB
+     * does not have, and aborts. On MariaDB servers that client needs --column-statistics=0;
+     * mariadb-dump (and the "mysqldump" alias MariaDB ships) does not know the flag at all.
+     */
+    private function needsColumnStatisticsOff(string $tool): bool
+    {
+        if (!$this->connection->getDatabasePlatform() instanceof MariaDBPlatform) {
+            return false;
+        }
+
+        $version = new Process([$tool, '--version']);
+        $version->run();
+
+        return $version->isSuccessful() && !str_contains($version->getOutput(), 'MariaDB');
+    }
+
+    /**
+     * Runs $operation with a 0077 umask, so every file it (or a child process) creates is
+     * owner-only from the first byte.
+     *
+     * @template T
+     *
+     * @param callable(): T $operation
+     *
+     * @return T
+     */
+    private static function privately(callable $operation): mixed
+    {
+        $previous = umask(0o077);
+        try {
+            return $operation();
+        } finally {
+            umask($previous);
+        }
     }
 
     private function findDumpTool(): ?string

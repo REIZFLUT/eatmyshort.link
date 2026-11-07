@@ -153,25 +153,31 @@ final class ClickRecorder
     private function insert(Click $click, int $linkId): bool
     {
         $connection = $this->em->getConnection();
+
+        // The uniqueness probe: a count of zero means this visitor_hash had no click on this
+        // link on this calendar day yet, so the row about to be written is the first one -
+        // the same "visitor" the link statistics count with COUNT(DISTINCT visitor_hash).
+        // It has to be its own statement instead of being folded into the counter UPDATE
+        // with RETURNING: MySQL cannot use RETURNING with UPDATE at all, MariaDB only with
+        // INSERT/DELETE. idx_click_day_visitor narrows it to this visitor's rows of the day.
+        //
+        // It deliberately runs BEFORE the transaction. On SQLite in WAL mode a deferred
+        // transaction that reads first and writes second cannot be upgraded to a writer
+        // once another connection committed in between: the INSERT then fails at once with
+        // SQLITE_BUSY ("database is locked") instead of waiting for busy_timeout, and the
+        // click is lost. Under parallel load that dropped ~8 % of the clicks. Starting the
+        // transaction with the write lets busy_timeout queue the writers again. Two
+        // simultaneous first clicks of one visitor may both be reported as unique - an
+        // accepted imprecision of a best-effort hint that the statistics do not rely on.
+        $seen = (int) $connection->executeQuery(
+            'SELECT COUNT(*) FROM click WHERE clicked_day = ? AND visitor_hash = ? AND link_id = ?',
+            [$click->getClickedDay()->format('Y-m-d'), $click->getVisitorHash(), $linkId],
+            [ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER],
+        )->fetchOne();
+
         $connection->beginTransaction();
 
         try {
-            // The uniqueness probe is a plain SELECT taken before the INSERT: a count of
-            // zero means this visitor_hash had no click on this calendar day yet, so the
-            // row about to be written is the first one and the visitor is unique today.
-            // It has to be its own statement instead of being folded into the counter
-            // UPDATE with RETURNING (which counted the rows after the insert): MySQL
-            // cannot use RETURNING with UPDATE at all, MariaDB only with INSERT/DELETE,
-            // so the RETURNING form broke the click path on those drivers. The extra read
-            // is accepted on this hot path - it is served by the existing idx_click_day
-            // index, which narrows the scan to the current day before visitor_hash is
-            // matched, and it runs after the response is sent (kernel.terminate).
-            $seen = (int) $connection->executeQuery(
-                'SELECT COUNT(*) FROM click WHERE clicked_day = ? AND visitor_hash = ?',
-                [$click->getClickedDay()->format('Y-m-d'), $click->getVisitorHash()],
-                [ParameterType::STRING, ParameterType::STRING],
-            )->fetchOne();
-
             $connection->executeStatement(
                 'INSERT INTO click (clicked_at, clicked_day, visitor_hash, ip_prefix, country_code, referrer_host, device_type, browser, os, language, bot, link_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [

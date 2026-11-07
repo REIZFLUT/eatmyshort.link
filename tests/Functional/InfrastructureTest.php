@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Command\DbBackupCommand;
 use App\Entity\AdminIpRule;
 use App\Entity\Click;
 use App\Entity\Domain;
@@ -17,6 +18,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpFoundation\Session\Storage\Handler\StrictSessionHandler;
+use Symfony\Component\Process\ExecutableFinder;
 
 final class InfrastructureTest extends KernelTestCase
 {
@@ -109,13 +111,24 @@ final class InfrastructureTest extends KernelTestCase
         $target = sys_get_temp_dir().'/emsl-backup-'.bin2hex(random_bytes(4)).'.sqlite';
 
         if (!$connection->getDatabasePlatform() instanceof SQLitePlatform) {
-            // app:db:backup is SQLite-only (VACUUM INTO). On MariaDB/MySQL it must fail loudly and
-            // point at the database's own tools instead of writing an unusable file.
+            // MariaDB/MySQL are dumped with the client tools. Without them the command must fail
+            // loudly and leave nothing behind; with them the dump is a gzip file, owner-only.
+            $target = sys_get_temp_dir().'/emsl-backup-'.bin2hex(random_bytes(4)).'.sql.gz';
+            $hasTool = array_filter(DbBackupCommand::DUMP_TOOLS, static fn (string $tool): bool => null !== new ExecutableFinder()->find($tool));
             try {
                 $tester->execute(['target' => $target]);
-                self::assertSame(Command::FAILURE, $tester->getStatusCode());
-                self::assertStringContainsString('Only SQLite databases can be backed up', $tester->getDisplay());
-                self::assertFileDoesNotExist($target, 'a failed backup must not leave a file behind');
+                if ([] === $hasTool) {
+                    self::assertSame(Command::FAILURE, $tester->getStatusCode());
+                    self::assertStringContainsString('client tools', $tester->getDisplay());
+                    self::assertFileDoesNotExist($target, 'a failed backup must not leave a file behind');
+
+                    return;
+                }
+                $tester->assertCommandIsSuccessful();
+                self::assertFileDoesNotExist(substr($target, 0, -3), 'the plain intermediate dump is removed');
+                self::assertStringContainsString('CREATE TABLE', (string) gzdecode((string) file_get_contents($target)));
+                clearstatcache(true, $target);
+                self::assertSame(0o600, fileperms($target) & 0o777, 'the dump contains secrets: owner read/write only');
             } finally {
                 if (is_file($target)) {
                     unlink($target);

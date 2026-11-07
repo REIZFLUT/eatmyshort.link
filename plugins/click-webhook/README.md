@@ -36,6 +36,10 @@ Payload (JSON):
 }
 ```
 
+`unique_visitor` is true for the visitor's first click on this link on this calendar day - the
+same visitor the link statistics count. It is a best-effort hint: two simultaneous first clicks
+may both carry `true`.
+
 The signature lets the receiver verify authenticity and integrity: compute
 `hash_hmac('sha256', $rawBody, $secret)` and compare it (in constant time) with the hex value
 after `sha256=`.
@@ -57,7 +61,7 @@ plugins:
                 X-Api-Key: '%env(CRM_API_KEY)%'
 ```
 
-Then reload the container (`php bin/console cache:clear --env=<env>`). The settings reach the
-plugin as the container parameter `app.plugins.click-webhook.settings`; `services.yaml`
+The change takes effect on the next request; a whitelist change needs no `cache:clear`.
+The settings reach the plugin as the container parameter `app.plugins.click-webhook.settings`; `services.yaml`
 injects that parameter into `ClickWebhookListener`. See
 [`plugins/README.md`](../README.md) for the contract.

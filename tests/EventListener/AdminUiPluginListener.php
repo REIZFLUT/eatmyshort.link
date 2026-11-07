@@ -37,11 +37,16 @@ final class AdminUiPluginListener
     {
         self::$widgets = [];
         self::$navItems = [];
+        self::$lastDashboard = null;
     }
+
+    /** The last dashboard event seen, so tests can check the viewer context it carried. */
+    public static ?DashboardWidgetsEvent $lastDashboard = null;
 
     #[AsEventListener(event: DashboardWidgetsEvent::class)]
     public function onDashboard(DashboardWidgetsEvent $event): void
     {
+        self::$lastDashboard = $event;
         foreach (self::$widgets as $widget) {
             $event->add($widget);
         }

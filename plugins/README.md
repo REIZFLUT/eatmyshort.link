@@ -79,7 +79,12 @@ Copy `utm-tagging/` as a starting point (or start from an empty directory) and f
 - A plugin directory is ordinary source code. Whether it belongs in this repository or in its
   own is your call: keeping it here versions it together with the app (simple, one deploy),
   keeping it out means you add it to `.gitignore` and copy it onto the server yourself.
-- The plugin list, its services and its routes are read while the container is compiled. After
-  adding a plugin, changing its whitelist entry or editing its `services.yaml`, run
-  `php bin/console cache:clear --env=<env>` - and `php bin/console app:plugin:validate` before
-  you trust it.
+- Enabling, disabling or reconfiguring a plugin in `config/plugins.yaml` takes effect on the
+  next request: the compiled container belongs to one set of enabled plugins, and a changed
+  set builds its own. Editing a plugin's code (`services.yaml`, `config/routes.yaml`, classes)
+  still needs `php bin/console cache:clear --env=<env>`, like any other code change. Run
+  `php bin/console app:plugin:validate` before you trust a plugin.
+- Settings are container parameters, so `%` starts a placeholder (`%env(NAME)%`). Write a
+  literal percent sign as `%%`, e.g. `campaign: '50%%-rabatt'` or an URL-encoded
+  `url: 'https://hooks.example.com/x?sig=a%%2Fb'` - a single `%` pair would be read as a
+  parameter name and stop the boot.

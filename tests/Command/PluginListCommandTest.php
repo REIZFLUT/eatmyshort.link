@@ -8,12 +8,14 @@ use App\Command\PluginListCommand;
 use App\Plugin\PluginConfig;
 use App\Plugin\PluginRegistry;
 use App\Tests\Plugin\TempDirectoryTrait;
+use App\Tests\Support\ConsoleDisplayAssertions;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class PluginListCommandTest extends TestCase
 {
+    use ConsoleDisplayAssertions;
     use TempDirectoryTrait;
 
     protected function setUp(): void
@@ -52,13 +54,13 @@ final class PluginListCommandTest extends TestCase
         $display = $tester->getDisplay();
 
         self::assertSame(Command::SUCCESS, $status);
-        self::assertStringContainsString('alpha', $display);
-        self::assertStringContainsString('1.2.3', $display);
-        self::assertStringContainsString('aktiv', $display);
-        self::assertStringContainsString('deaktiviert', $display);
-        self::assertStringContainsString('nicht gefunden', $display);
-        self::assertStringContainsString('>=1.0', $display);
-        self::assertStringContainsString($this->tempDir.'/gamma', $display);
+        self::assertDisplayContains('alpha', $display);
+        self::assertDisplayContains('1.2.3', $display);
+        self::assertDisplayContains('aktiv', $display);
+        self::assertDisplayContains('deaktiviert', $display);
+        self::assertDisplayContains('nicht gefunden', $display);
+        self::assertDisplayContains('>=1.0', $display);
+        self::assertDisplayContains($this->tempDir.'/gamma', $display);
     }
 
     public function testEmptyWhitelistNotesThatNothingIsListed(): void
@@ -68,6 +70,6 @@ final class PluginListCommandTest extends TestCase
         $tester = new CommandTester(new Command('app:plugin:list', new PluginListCommand($registry, 'dev')));
 
         self::assertSame(Command::SUCCESS, $tester->execute([]));
-        self::assertStringContainsString('No plugins are listed', $tester->getDisplay());
+        self::assertDisplayContains('No plugins are listed', $tester->getDisplay());
     }
 }

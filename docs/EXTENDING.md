@@ -64,8 +64,12 @@ when@dev:                      # Umgebungs-Overlay: wird über die Einträge obe
 - **Fail-closed:** ist ein aktiviertes Plugin nicht auffindbar, ist seine `plugin.yaml`
   unlesbar oder seine `requires.api`-Angabe nicht erfüllbar, bricht der Boot mit einer
   klaren Meldung ab, statt halb geladen weiterzulaufen.
-- Änderungen an Whitelist, Services oder Routen eines Plugins sind Konfigurationsänderungen
-  und werden erst nach `php bin/console cache:clear --env=<env>` wirksam.
+- Ein Wechsel in der Whitelist (aktivieren, deaktivieren, `settings` ändern) und eine neue
+  `version` in `plugin.yaml` wirken **ohne** `cache:clear`: Der kompilierte Container und der
+  Routen-Cache gehören jeweils zu genau einer Menge aktiver Plugins (ein Fingerabdruck steckt im
+  Klassennamen des Containers), eine geänderte Menge baut beim ersten Request ihren eigenen.
+  Änderungen am *Code* eines Plugins (`services.yaml`, `config/routes.yaml`, Klassen) brauchen
+  dagegen wie jeder andere Code `php bin/console cache:clear --env=<env>` bzw. einen Deploy.
 
 ## Einstellungen
 
@@ -82,6 +86,11 @@ services:
 
 Fehlende Schlüssel muss die Klasse selbst mit Defaults abfangen – sie ist dafür
 verantwortlich, dass ein nicht konfiguriertes Plugin nichts tut statt zu scheitern.
+
+Weil die Werte Container-Parameter sind, leitet `%` einen Platzhalter ein (`%env(NAME)%`).
+Ein wörtliches Prozentzeichen wird als `%%` geschrieben, etwa `campaign: '50%%-rabatt'` oder
+eine URL-kodierte Adresse `url: 'https://hooks.example.com/x?sig=a%%2Fb'`. Zwei einzelne `%`
+in einem Wert würden als Parametername gelesen und den Boot abbrechen.
 
 ## Event-Katalog
 
@@ -100,7 +109,7 @@ markiert. Abonniert wird mit `#[AsEventListener]` (Autoconfigure aktiv) oder per
 | `Link\LinkDeletedEvent` | Link gelöscht | nur lesen |
 | `Link\ShortCodeGeneratingEvent` | Kürzel wird erzeugt | Kürzel vorschlagen (`setShortCode()`) |
 | `Api\ApiResponseEvent` | erfolgreiche API-Antwort wird serialisiert | Felder ergänzen (`setField()`) |
-| `Admin\DashboardWidgetsEvent` | Dashboard wird gerendert | Karten hinzufügen (`add(AdminWidget)`) |
+| `Admin\DashboardWidgetsEvent` | Dashboard wird gerendert (für jeden Nutzer) | Karten hinzufügen (`add(AdminWidget)`); `getViewer()`, `isViewerAdmin()` |
 | `Admin\AdminNavBuildingEvent` | Admin-Navigation wird gerendert (nur für Admins) | Einträge hinzufügen (`add(AdminNavItem)`) |
 
 ### Weiterleitung
@@ -170,8 +179,19 @@ APIs verlassen sich auf das, was da ist. Fehlerantworten lösen das Event nicht 
 `DashboardWidgetsEvent` und `AdminNavBuildingEvent` erweitern die Oberfläche:
 
 ```php
-$event->add(new AdminWidget('clicks-today', 'Klicks heute', (string) $count, hint: 'live', url: '/stats'));
+$event->add(new AdminWidget('my-campaigns', 'Meine Kampagnen', (string) $count, hint: 'live', url: '/plugin/campaigns'));
 $event->add(new AdminNavItem('Wartung', '/plugin/admin/maintenance'));
+```
+
+**Das Dashboard ist die Startseite jedes angemeldeten Nutzers, keine Admin-Seite.** Das Event
+nennt den Betrachter (`getViewer()`) und ob er gerade Admin-Rechte hat (`isViewerAdmin()`,
+Rolle *und* IP-Freigabe). Eine Karte mit installationsweiten Zahlen gehört hinter
+`isViewerAdmin()`, eine persönliche Karte zählt nur die Daten von `getViewer()`:
+
+```php
+if ($event->isViewerAdmin()) {
+    $event->add(new AdminWidget('clicks-today', 'Klicks heute', (string) $count, hint: 'alle Nutzer'));
+}
 ```
 
 Karten werden nach den eingebauten Karten gerendert und nutzen deren Markup (`.stats`,
@@ -214,8 +234,16 @@ Eigene Seiten liefert das Plugin selbst (Route + Zugriffsschutz, z. B. `#[IsGran
 
 ## Betrieb
 
-- Plugin-Code und -Konfiguration werden **beim Kompilieren des Containers** gelesen. Nach
-  Änderungen an Whitelist, Services oder Routen `cache:clear` (bzw. ein Deploy) ausführen.
+- Plugin-Code wird **beim Kompilieren des Containers** gelesen: nach Änderungen an Services,
+  Routen oder Klassen `cache:clear` (bzw. ein Deploy) ausführen. Whitelist-Änderungen erkennt
+  der Kernel selbst (siehe oben); der neue Container entsteht dann beim ersten Request, das
+  Cache-Verzeichnis muss dafür wie üblich für PHP-FPM schreibbar sein.
+- Die aufgelöste Plugin-Liste wird in `var/cache/<env>/plugins.cache` gemerkt und nur neu
+  gelesen, wenn sich Whitelist oder eine `plugin.yaml` inhaltlich ändert – der Boot parst
+  also nicht bei jedem Request YAML.
+- PHPStan liest den Dev-Container aus `var/cache/dev/App_KernelDevDebugContainer.xml`. Ist in
+  `dev` ein Plugin aktiv, trägt der Container einen Fingerabdruck im Namen; für die Analyse
+  dann `containerXmlPath` anpassen oder die Plugins in `dev` abschalten.
 - Klassender Autoloading läuft bei jedem Boot; ein neues Plugin braucht keinen
   Composer-Lauf.
 - `app:plugin:validate` gehört ins Deployment (CI und `bin/deploy.sh`, das es vor dem

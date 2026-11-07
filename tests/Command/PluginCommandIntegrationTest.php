@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Command;
 
+use App\Tests\Support\ConsoleDisplayAssertions;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -16,6 +17,8 @@ use Symfony\Component\Console\Tester\CommandTester;
  */
 final class PluginCommandIntegrationTest extends KernelTestCase
 {
+    use ConsoleDisplayAssertions;
+
     public function testBothCommandsRunAgainstTheFixturePlugins(): void
     {
         $application = new Application(self::bootKernel());
@@ -24,14 +27,14 @@ final class PluginCommandIntegrationTest extends KernelTestCase
         $list = new CommandTester($application->find('app:plugin:list'));
         self::assertSame(0, $list->execute([]));
         $listDisplay = $list->getDisplay();
-        self::assertStringContainsString('probe', $listDisplay);
-        self::assertStringContainsString('aktiv', $listDisplay);
-        self::assertStringContainsString('deaktiviert', $listDisplay);
+        self::assertDisplayContains('probe', $listDisplay);
+        self::assertDisplayContains('aktiv', $listDisplay);
+        self::assertDisplayContains('deaktiviert', $listDisplay);
 
         $validate = new CommandTester($application->find('app:plugin:validate'));
         self::assertSame(0, $validate->execute([]), 'only warnings, so the exit code stays 0');
         $validateDisplay = $validate->getDisplay();
-        self::assertStringContainsString('unlisted', $validateDisplay);
-        self::assertStringContainsString('not listed in the whitelist', $validateDisplay);
+        self::assertDisplayContains('unlisted', $validateDisplay);
+        self::assertDisplayContains('not listed in the whitelist', $validateDisplay);
     }
 }

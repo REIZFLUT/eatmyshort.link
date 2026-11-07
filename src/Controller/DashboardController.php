@@ -32,7 +32,8 @@ final class DashboardController extends AbstractController
         AdminAccess $adminAccess,
         EventDispatcherInterface $dispatcher,
     ): Response {
-        $usable = $domains->findUsableBy($user, $adminAccess->isAdmin($user));
+        $isAdmin = $adminAccess->isAdmin($user);
+        $usable = $domains->findUsableBy($user, $isAdmin);
         $link = new Link($user);
         $link->setDomain($usable[0] ?? null);
         $manager->applyDefaults($link);
@@ -44,8 +45,9 @@ final class DashboardController extends AbstractController
             'action' => $this->generateUrl('app_link_new'),
         ]);
 
-        // Plugins may append their own cards after the built-in ones.
-        $widgets = new DashboardWidgetsEvent();
+        // Plugins may append their own cards after the built-in ones. Every user sees this
+        // page, so the event tells plugins who is looking and whether they are an admin.
+        $widgets = new DashboardWidgetsEvent($user, $isAdmin);
         $dispatcher->dispatch($widgets);
 
         return $this->render('dashboard/index.html.twig', [

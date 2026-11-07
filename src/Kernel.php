@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App;
 
 use App\Plugin\PluginAutoloader;
+use App\Plugin\PluginMetadata;
 use App\Plugin\PluginRegistry;
 use App\Security\AppSecretCheck;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
@@ -17,6 +20,9 @@ class Kernel extends BaseKernel
     use MicroKernelTrait;
 
     private ?PluginRegistry $pluginRegistry = null;
+
+    /** @var list<PluginMetadata>|null */
+    private ?array $activePlugins = null;
 
     public function boot(): void
     {
@@ -60,7 +66,7 @@ class Kernel extends BaseKernel
             $container->import($configDir.'/{services}_'.$this->environment.'.php');
         }
 
-        foreach ($this->pluginRegistry()->active($this->environment) as $plugin) {
+        foreach ($this->activePlugins() as $plugin) {
             // The operator's settings for a plugin are free-form and only known at build
             // time, so they become a container parameter the plugin can inject from its own
             // services.yaml as '%app.plugins.<name>.settings%'. Set before importing the
@@ -93,7 +99,7 @@ class Kernel extends BaseKernel
             $routes->import($configDir.'/{routes}.php');
         }
 
-        foreach ($this->pluginRegistry()->active($this->environment) as $plugin) {
+        foreach ($this->activePlugins() as $plugin) {
             $routesFile = $plugin->directory.'/config/routes.yaml';
             if (is_file($routesFile)) {
                 $routes->import($routesFile);
@@ -103,6 +109,50 @@ class Kernel extends BaseKernel
         if ($fileName = (new \ReflectionObject($this))->getFileName()) {
             $routes->import($fileName, 'attribute');
         }
+    }
+
+    /**
+     * The compiled container belongs to exactly one set of enabled plugins.
+     *
+     * Without this, enabling, disabling or reconfiguring a plugin in a production install
+     * (no cache freshness checks) kept serving the container compiled for the previous set
+     * until somebody ran cache:clear - and a disabled plugin was worse than ignored: its
+     * listeners were still wired while its classes were no longer autoloaded, so every
+     * redirect failed with "Class not found". The fingerprint of the active set becomes part
+     * of the container class name, so a changed set simply finds no compiled container and
+     * builds its own on the first request. With no plugin enabled the name is the framework
+     * default. Old containers are removed with the build directory by the next cache:clear.
+     */
+    protected function getContainerClass(): string
+    {
+        $fingerprint = $this->pluginFingerprint();
+
+        return parent::getContainerClass().('' === $fingerprint ? '' : 'P'.$fingerprint);
+    }
+
+    /**
+     * The router cache (url_matching_routes.php, ...) lives in the build directory under a
+     * fixed name and is not checked for freshness in production either, so it follows the
+     * plugin fingerprint just like the container: plugin routes appear and disappear together
+     * with the plugin's services.
+     */
+    protected function build(ContainerBuilder $container): void
+    {
+        $fingerprint = $this->pluginFingerprint();
+        if ('' === $fingerprint) {
+            return;
+        }
+
+        $container->addCompilerPass(new class($fingerprint) implements CompilerPassInterface {
+            public function __construct(private readonly string $fingerprint)
+            {
+            }
+
+            public function process(ContainerBuilder $container): void
+            {
+                $container->setParameter('router.cache_dir', '%kernel.build_dir%/routes-'.$this->fingerprint);
+            }
+        });
     }
 
     /**
@@ -116,9 +166,37 @@ class Kernel extends BaseKernel
     private function registerPluginAutoloading(): void
     {
         $autoloader = new PluginAutoloader();
-        foreach ($this->pluginRegistry()->active($this->environment) as $plugin) {
+        foreach ($this->activePlugins() as $plugin) {
             $autoloader->register($plugin);
         }
+    }
+
+    /**
+     * The enabled plugins, resolved once per kernel and memoised across requests in the cache
+     * directory (see PluginRegistry::activeCached()).
+     *
+     * @return list<PluginMetadata>
+     */
+    private function activePlugins(): array
+    {
+        return $this->activePlugins ??= $this->pluginRegistry()->activeCached($this->environment, $this->getCacheDir().'/plugins.cache');
+    }
+
+    /**
+     * Short hash over everything a plugin contributes to the compiled container: name,
+     * version, settings and location of every enabled plugin. Empty when none is enabled.
+     */
+    private function pluginFingerprint(): string
+    {
+        $plugins = $this->activePlugins();
+        if ([] === $plugins) {
+            return '';
+        }
+
+        return substr(hash('xxh128', serialize(array_map(
+            static fn (PluginMetadata $plugin): array => [$plugin->name, $plugin->version, $plugin->requiresApi, $plugin->settings, $plugin->directory],
+            $plugins,
+        ))), 0, 12);
     }
 
     private function pluginRegistry(): PluginRegistry

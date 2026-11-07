@@ -20,7 +20,9 @@ use App\Entity\Link;
 final class ClickRecordedEvent
 {
     /**
-     * @param bool $uniqueVisitor true when this visitor/day combination was not seen before
+     * @param bool $uniqueVisitor true for this visitor's first click on this link on this calendar
+     *                            day - the visitor the link statistics count. Best effort: two
+     *                            simultaneous first clicks may both be reported as unique.
      */
     public function __construct(
         private readonly Link $link,

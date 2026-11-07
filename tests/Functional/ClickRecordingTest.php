@@ -43,6 +43,26 @@ final class ClickRecordingTest extends EventTestCase
         self::assertNotNull($fresh->getLastClickAt(), 'last_click_at is set on every recorded click');
     }
 
+    public function testUniquenessIsPerLinkLikeTheStatistics(): void
+    {
+        $owner = $this->createUser('owner@example.com');
+        $domain = $this->createDomain('go.example.com');
+        $first = $this->createLink($owner, $domain, 'erster', 'https://www.example.com/1');
+        $second = $this->createLink($owner, $domain, 'zweiter', 'https://www.example.com/2');
+        $recorder = $this->pinnedRecorder();
+        EventTestState::$recordClicks = true;
+
+        $request = $this->clickRequest();
+        $at = new \DateTimeImmutable('today 09:00:00');
+        $recorder->record($request, (int) $first->getId(), $at);
+        $recorder->record($request, (int) $second->getId(), $at);
+
+        $recorded = EventTestState::recordedClicks();
+        self::assertCount(2, $recorded);
+        self::assertTrue($recorded[0]->isUniqueVisitor());
+        self::assertTrue($recorded[1]->isUniqueVisitor(), 'a visitor of another link is still new for this link');
+    }
+
     public function testTheSameVisitorIsUniqueAgainOnTheNextDay(): void
     {
         $owner = $this->createUser('owner@example.com');

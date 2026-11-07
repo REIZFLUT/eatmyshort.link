@@ -44,6 +44,6 @@ plugins:
             campaign: spring-launch
 ```
 
-Then reload the container (`php bin/console cache:clear --env=<env>`). The settings reach the
-plugin as the container parameter `app.plugins.utm-tagging.settings`; `services.yaml` injects
-that parameter into `UtmTagger`. See [`plugins/README.md`](../README.md) for the contract.
+The change takes effect on the next request; a whitelist change needs no `cache:clear`.
+The settings reach the plugin as the container parameter
+`app.plugins.utm-tagging.settings`; `services.yaml` injects that parameter into `UtmTagger`. See [`plugins/README.md`](../README.md) for the contract.

@@ -216,4 +216,61 @@ final class PluginRegistryTest extends TestCase
         self::assertFalse(PluginRegistry::isValidName('under_score'));
         self::assertFalse(PluginRegistry::isValidName(str_repeat('a', 41)));
     }
+
+    // --- activeCached(): the per-request memo of the kernel -------------
+
+    public function testCachedResultMatchesTheFreshOneAndIsReused(): void
+    {
+        $this->addPlugin('alpha', $this->manifest('alpha', '1.2.0'));
+        $registry = $this->registryFor(['alpha' => []]);
+        $cache = $this->tempDir.'/cache/plugins.cache';
+
+        $first = $registry->activeCached('prod', $cache);
+        self::assertEquals($registry->active('prod'), $first);
+        self::assertFileExists($cache);
+
+        // Tamper with the stored payload: if the second call returns the tampered value, it was
+        // served from the cache instead of parsing the YAML again.
+        $data = unserialize((string) file_get_contents($cache));
+        self::assertIsArray($data);
+        $data['plugins'][0]['description'] = 'from the cache';
+        file_put_contents($cache, serialize($data));
+
+        self::assertSame('from the cache', $registry->activeCached('prod', $cache)[0]->description);
+    }
+
+    public function testChangedWhitelistOrManifestInvalidatesTheCache(): void
+    {
+        $this->addPlugin('alpha', $this->manifest('alpha', '1.0.0'));
+        $this->addPlugin('beta', $this->manifest('beta'));
+        $cache = $this->tempDir.'/cache/plugins.cache';
+
+        self::assertCount(1, $this->registryFor(['alpha' => [], 'beta' => ['enabled' => false]])->activeCached('prod', $cache));
+        self::assertCount(2, $this->registryFor(['alpha' => [], 'beta' => []])->activeCached('prod', $cache), 'whitelist edited');
+
+        $this->writeFile('alpha/plugin.yaml', $this->manifest('alpha', '1.0.1'));
+        $plugins = $this->registryFor(['alpha' => [], 'beta' => []])->activeCached('prod', $cache);
+        self::assertSame('1.0.1', $plugins[0]->version, 'manifest edited');
+    }
+
+    public function testCacheNeverHidesABrokenPlugin(): void
+    {
+        $this->addPlugin('alpha', $this->manifest('alpha'));
+        $registry = $this->registryFor(['alpha' => []]);
+        $cache = $this->tempDir.'/cache/plugins.cache';
+        self::assertCount(1, $registry->activeCached('prod', $cache));
+
+        unlink($this->tempDir.'/alpha/plugin.yaml');
+
+        $this->expectException(PluginException::class);
+        $registry->activeCached('prod', $cache);
+    }
+
+    public function testUnreadableCacheFallsBackToTheWhitelist(): void
+    {
+        $this->addPlugin('alpha', $this->manifest('alpha'));
+        $cache = $this->writeFile('cache/plugins.cache', 'not serialized at all');
+
+        self::assertCount(1, $this->registryFor(['alpha' => []])->activeCached('prod', $cache));
+    }
 }

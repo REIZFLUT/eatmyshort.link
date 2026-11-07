@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Entity\User;
 use App\Event\Admin\DashboardWidgetsEvent;
 use Plugin\Off\OffController;
 use Plugin\Probe\ProbeRecorder;
@@ -39,7 +40,7 @@ final class PluginLoadingTest extends AppTestCase
         $dispatcher = static::getContainer()->get('event_dispatcher');
         self::assertInstanceOf(EventDispatcherInterface::class, $dispatcher);
 
-        $event = new DashboardWidgetsEvent();
+        $event = new DashboardWidgetsEvent(new User(), false);
         $dispatcher->dispatch($event);
 
         self::assertTrue($event->has('probe'), 'the plugin added its dashboard widget');

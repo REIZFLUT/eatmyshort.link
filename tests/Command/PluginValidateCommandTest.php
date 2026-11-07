@@ -8,12 +8,14 @@ use App\Command\PluginValidateCommand;
 use App\Plugin\PluginConfig;
 use App\Plugin\PluginRegistry;
 use App\Tests\Plugin\TempDirectoryTrait;
+use App\Tests\Support\ConsoleDisplayAssertions;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class PluginValidateCommandTest extends TestCase
 {
+    use ConsoleDisplayAssertions;
     use TempDirectoryTrait;
 
     protected function setUp(): void
@@ -54,7 +56,7 @@ final class PluginValidateCommandTest extends TestCase
         $tester = $this->tester($registry);
 
         self::assertSame(Command::SUCCESS, $tester->execute([]));
-        self::assertStringContainsString('No plugin problems found', $tester->getDisplay());
+        self::assertDisplayContains('No plugin problems found', $tester->getDisplay());
     }
 
     public function testEnabledPluginWithoutDirectoryFails(): void
@@ -65,8 +67,8 @@ final class PluginValidateCommandTest extends TestCase
 
         self::assertSame(Command::FAILURE, $tester->execute([]));
         $display = $tester->getDisplay();
-        self::assertStringContainsString('ghost', $display);
-        self::assertStringContainsString($this->tempDir.'/ghost', $display);
+        self::assertDisplayContains('ghost', $display);
+        self::assertDisplayContains($this->tempDir.'/ghost', $display);
     }
 
     public function testBrokenManifestFails(): void
@@ -77,7 +79,7 @@ final class PluginValidateCommandTest extends TestCase
         $tester = $this->tester($registry);
 
         self::assertSame(Command::FAILURE, $tester->execute([]));
-        self::assertStringContainsString('cannot parse', $tester->getDisplay());
+        self::assertDisplayContains('cannot parse', $tester->getDisplay());
     }
 
     public function testUnlistedDirectoryIsAWarningNotAnError(): void
@@ -90,8 +92,8 @@ final class PluginValidateCommandTest extends TestCase
 
         self::assertSame(Command::SUCCESS, $tester->execute([]));
         $display = $tester->getDisplay();
-        self::assertStringContainsString('not listed in the whitelist', $display);
-        self::assertStringContainsString('No plugin errors found', $display);
+        self::assertDisplayContains('not listed in the whitelist', $display);
+        self::assertDisplayContains('No plugin errors found', $display);
     }
 
     public function testWorldWritableFileIsAWarning(): void
@@ -104,6 +106,6 @@ final class PluginValidateCommandTest extends TestCase
         $tester = $this->tester($registry);
 
         self::assertSame(Command::SUCCESS, $tester->execute([]));
-        self::assertStringContainsString('world-writable', $tester->getDisplay());
+        self::assertDisplayContains('world-writable', $tester->getDisplay());
     }
 }

@@ -50,6 +50,23 @@ final class AdminUiPluginHooksTest extends AppTestCase
         self::assertSame('stats', $stack->children()->last()->attr('class'));
     }
 
+    public function testDashboardEventTellsPluginsWhoIsLooking(): void
+    {
+        $user = $this->createUser('dash@example.com');
+        $this->client->loginUser($user);
+        $this->client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+
+        $event = AdminUiPluginListener::$lastDashboard;
+        self::assertNotNull($event);
+        self::assertSame($user->getId(), $event->getViewer()->getId());
+        self::assertFalse($event->isViewerAdmin(), 'a normal user must not get installation-wide cards');
+
+        $this->client->loginUser($this->createUser('root@example.com', admin: true));
+        $this->client->request('GET', '/');
+        self::assertTrue(AdminUiPluginListener::$lastDashboard?->isViewerAdmin());
+    }
+
     public function testDashboardWidgetWithUrlBecomesALink(): void
     {
         AdminUiPluginListener::withWidgets(new AdminWidget('demo', 'Plugin Widget', '42', hint: 'from a plugin', url: 'https://example.com/plugin'));
